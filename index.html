@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>사인회 추첨기</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.15);
+    --text: #f0f0f8;
+    --muted: rgba(240,240,248,0.45);
+    --dim: rgba(240,240,248,0.2);
+
+    --yeonho: #7B9FFF;
+    --bamby: #FF7BAC;
+    --noah: #7BFFE0;
+    --eunho: #FFD97B;
+    --hamin: #C47BFF;
+    --accent: #7B9FFF;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* STARS BACKGROUND */
+  .stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+  .star { position: absolute; border-radius: 50%; background: white; animation: twinkle var(--d, 3s) ease-in-out infinite alternate; }
+  @keyframes twinkle { from { opacity: var(--a, 0.2); } to { opacity: var(--b, 0.7); } }
+
+  /* LAYOUT */
+  .wrap { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+  /* HEADER */
+  header {
+    padding: 32px 0 20px;
+    border-bottom: 0.5px solid var(--border);
+    margin-bottom: 40px;
+  }
+  .header-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-mark {
+    width: 36px; height: 36px;
+    border: 1.5px solid var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
+  .logo-text { font-size: 15px; font-weight: 500; letter-spacing: 0.5px; }
+  .logo-sub { font-size: 11px; color: var(--muted); font-family: 'Space Mono', monospace; letter-spacing: 1px; }
+  .step-nav { display: flex; gap: 8px; }
+  .step-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border2);
+    transition: background 0.3s, transform 0.3s;
+  }
+  .step-dot.active { background: var(--accent); transform: scale(1.3); }
+
+  /* SCREENS */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* SECTION TITLE */
+  .sec-title { font-size: 13px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 24px; font-family: 'Space Mono', monospace; }
+  .sec-head { display: flex; align-items: baseline; gap: 16px; margin-bottom: 32px; }
+  .sec-head h2 { font-size: 28px; font-weight: 300; letter-spacing: -0.5px; }
+  .sec-head span { font-size: 13px; color: var(--muted); }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+  .card-title { font-size: 13px; font-weight: 500; color: var(--muted); margin-bottom: 16px; letter-spacing: 0.5px; }
+
+  /* FORM ELEMENTS */
+  label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 8px; }
+  input[type=text], input[type=number], select, textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 0.5px solid var(--border2);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+    margin-bottom: 16px;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  select option { background: #1a1a26; }
+
+  /* RADIO / TOGGLE GROUPS */
+  .toggle-group { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .toggle-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 0.5px solid var(--border2);
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    font-family: 'Noto Sans KR', sans-serif;
+    transition: all 0.2s;
+  }
+  .toggle-btn.active {
+    background: var(--accent);
+    color: #0a0a0f;
+    border-color: var(--accent);
+    font-weight: 500;
+  }
+  .toggle-btn:hover:not(.active) { border-color: var(--text); color: var(--text); }
+
+  /* MEMBER COLORS */
+  .toggle-btn[data-member="연호"].active { background: var(--yeonho); border-color: var(--yeonho); }
+  .toggle-btn[data-member="밤비"].active { background: var(--bamby); border-color: var(--bamby); }
+  .toggle-btn[data-member="노아"].active { background: var(--noah); border-color: var(--noah); }
+  .toggle-btn[data-member="은호"].active { background: var(--eunho); border-color: var(--eunho); }
+  .toggle-btn[data-member="하민"].active { background: var(--hamin); border-color: var(--hamin); }
+
+  /* FILE UPLOAD */
+  .upload-area {
+    border: 1.5px dashed var(--border2);
+    border-radius: 14px;
+    padding: 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    margin-bottom: 16px;
+  }
+  .upload-area:hover { border-color: var(--accent); background: rgba(123,159,255,0.04); }
+  .upload-area.has-data { border-style: solid; border-color: rgba(123,255,224,0.4); background: rgba(123,255,224,0.04); }
+  .upload-icon { font-size: 32px; margin-bottom: 12px; }
+  .upload-text { font-size: 14px; color: var(--muted); }
+  .upload-sub { font-size: 12px; color: var(--dim); margin-top: 6px; }
+  #file-input { display: none; }
+
+  /* DATA PREVIEW TABLE */
+  .data-table-wrap { overflow-x: auto; margin-top: 12px; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: 'Space Mono', monospace; }
+  .data-table th { padding: 8px 12px; background: var(--surface2); color: var(--muted); text-align: left; border-bottom: 0.5px solid var(--border); font-weight: 400; }
+  .data-table td { padding: 7px 12px; border-bottom: 0.5px solid var(--border); color: var(--text); }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table .member-cell { font-weight: 700; }
+  .m-yeonho { color: var(--yeonho); }
+  .m-bamby { color: var(--bamby); }
+  .m-noah { color: var(--noah); }
+  .m-eunho { color: var(--eunho); }
+  .m-hamin { color: var(--hamin); }
+
+  /* STAT CHIPS */
+  .stat-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+  .stat-chip {
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: 0.5px solid var(--border);
+    background: var(--surface2);
+  }
+  .stat-chip .val { font-size: 20px; font-weight: 500; font-family: 'Space Mono', monospace; }
+  .stat-chip .lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* MEMBER STAT CHIPS */
+  .member-stat {
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: 0.5px solid;
+    flex: 1;
+    min-width: 120px;
+  }
+  .member-stat .m-name { font-size: 12px; font-weight: 500; margin-bottom: 4px; }
+  .member-stat .m-count { font-size: 22px; font-weight: 700; font-family: 'Space Mono', monospace; }
+  .member-stat .m-lbl { font-size: 10px; opacity: 0.6; margin-top: 2px; }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 12px 28px;
+    border-radius: 10px;
+    border: none;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: 'Noto Sans KR', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-primary { background: var(--accent); color: #0a0a0f; }
+  .btn-primary:hover { opacity: 0.85; transform: translateY(-1px); }
+  .btn-outline { background: transparent; border: 0.5px solid var(--border2); color: var(--text); }
+  .btn-outline:hover { border-color: var(--text); }
+  .btn-danger { background: transparent; border: 0.5px solid rgba(255,100,100,0.3); color: #ff8a8a; }
+  .btn-danger:hover { background: rgba(255,100,100,0.1); }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 24px; }
+
+  /* GRID */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* RAFFLE ANIMATION SCREEN */
+  .raffle-stage {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 20px;
+    padding: 40px 24px;
+    text-align: center;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .raffle-stage::before {
+    content: '';
+    position: absolute;
+    top: -60px; left: 50%; transform: translateX(-50%);
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(123,159,255,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .seed-display {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface2);
+    border: 0.5px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    margin-bottom: 24px;
+    letter-spacing: 0.5px;
+  }
+
+  .shuffle-area {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 20px 0;
+    min-height: 80px;
+    align-items: center;
+  }
+
+  .raffle-card {
+    width: 54px; height: 76px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    border: 1.5px solid;
+    transition: all 0.15s ease;
+    position: relative;
+    cursor: default;
+    flex-shrink: 0;
+  }
+  .raffle-card .card-num { font-size: 14px; margin-bottom: 4px; }
+  .raffle-card .card-member { font-size: 9px; opacity: 0.7; }
+  .raffle-card.face-down { background: var(--surface2); border-color: var(--border2); }
+  .raffle-card.face-down .card-num, .raffle-card.face-down .card-member { visibility: hidden; }
+  .raffle-card.face-down::after { content: '✦'; position: absolute; color: var(--border2); font-size: 18px; }
+
+  @keyframes shuffle-bounce {
+    0% { transform: translateY(0) rotate(0deg); }
+    25% { transform: translateY(-20px) rotate(-8deg); }
+    50% { transform: translateY(-30px) rotate(5deg); }
+    75% { transform: translateY(-10px) rotate(-3deg); }
+    100% { transform: translateY(0) rotate(0deg); }
+  }
+  @keyframes card-flip {
+    0% { transform: rotateY(0deg) scale(1); }
+    50% { transform: rotateY(90deg) scale(1.1); }
+    100% { transform: rotateY(0deg) scale(1); }
+  }
+  @keyframes winner-reveal {
+    0% { transform: scale(0.5) translateY(30px); opacity: 0; }
+    60% { transform: scale(1.15) translateY(-5px); opacity: 1; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+  }
+  @keyframes glow-pulse {
+    0%, 100% { box-shadow: 0 0 12px currentColor; }
+    50% { box-shadow: 0 0 30px currentColor, 0 0 60px currentColor; }
+  }
+  .card-shuffle { animation: shuffle-bounce 0.4s ease-in-out; }
+  .card-flip { animation: card-flip 0.5s ease-in-out; }
+
+  /* PROGRESS BAR */
+  .progress-wrap { margin: 16px 0; }
+  .progress-label { font-size: 12px; color: var(--muted); margin-bottom: 8px; display: flex; justify-content: space-between; }
+  .progress-bar { height: 3px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s ease; width: 0%; }
+
+  /* STATUS INDICATOR */
+  .status-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .status-dot.idle { background: var(--dim); }
+  .status-dot.running { background: #7BFFE0; animation: blink 0.8s ease-in-out infinite; }
+  .status-dot.done { background: #7BFF9F; }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .status-text { font-size: 13px; color: var(--muted); font-family: 'Space Mono', monospace; }
+
+  /* FAIRNESS METRICS */
+  .fairness-bar {
+    background: var(--surface2);
+    border: 0.5px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .fairness-icon { font-size: 16px; flex-shrink: 0; }
+  .fairness-label { font-size: 12px; color: var(--muted); flex: 1; }
+  .fairness-val { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--noah); font-weight: 700; }
+
+  /* WINNER LIST */
+  .winner-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    animation: winner-reveal 0.4s ease-out;
+  }
+  .winner-rank {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+    min-width: 32px;
+  }
+  .winner-member-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 6px;
+    min-width: 44px;
+    text-align: center;
+  }
+  .winner-info { flex: 1; }
+  .winner-name { font-size: 14px; font-weight: 500; }
+  .winner-detail { font-size: 11px; color: var(--muted); font-family: 'Space Mono', monospace; margin-top: 2px; }
+  .winner-order { font-size: 12px; color: var(--dim); font-family: 'Space Mono', monospace; }
+
+  /* TABS */
+  .tab-row { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 0.5px solid var(--border); }
+  .tab-btn {
+    padding: 10px 18px;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 13px;
+    font-family: 'Noto Sans KR', sans-serif;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -0.5px;
+    transition: all 0.2s;
+  }
+  .tab-btn.active { color: var(--text); border-bottom-color: var(--accent); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* NOTICE */
+  .notice {
+    background: rgba(123,159,255,0.07);
+    border: 0.5px solid rgba(123,159,255,0.2);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 12px;
+    color: rgba(123,159,255,0.8);
+    margin-bottom: 16px;
+    line-height: 1.6;
+  }
+
+  /* COUNTER ANIM */
+  @keyframes countUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .count-anim { animation: countUp 0.3s ease-out; }
+
+  /* MEMBER EDITOR */
+  .member-editor-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .member-editor-row:last-child { border-bottom: none; }
+
+  /* TICKET MODE BUTTONS */
+  .ticket-mode-btn {
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    text-align: left;
+    cursor: pointer;
+    font-family: 'Noto Sans KR', sans-serif;
+    color: var(--text);
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .ticket-mode-btn:hover { border-color: var(--border2); background: rgba(255,255,255,0.04); }
+  .ticket-mode-btn.active {
+    border-color: var(--accent);
+    background: rgba(123,159,255,0.08);
+    box-shadow: inset 0 0 0 0.5px var(--accent);
+  }
+  .ticket-mode-btn .tm-icon { font-size: 18px; margin-bottom: 8px; }
+  .ticket-mode-btn .tm-title { font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+  .ticket-mode-btn .tm-desc { font-size: 11px; color: var(--muted); line-height: 1.7; margin-bottom: 10px; }
+  .ticket-mode-btn .tm-tag {
+    display: inline-block; font-size: 10px; padding: 2px 8px;
+    border-radius: 20px; border: 0.5px solid var(--border2);
+    color: var(--muted); font-family: 'Space Mono', monospace;
+  }
+  .ticket-mode-btn.active .tm-tag {
+    border-color: var(--accent); color: var(--accent);
+    background: rgba(123,159,255,0.1);
+  }
+  .ticket-mode-btn.active::after {
+    content: '✓';
+    position: absolute; top: 12px; right: 14px;
+    font-size: 13px; color: var(--accent); font-weight: 700;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 640px) {
+    .stat-row { gap: 8px; }
+    .stat-chip { flex: 1; min-width: 120px; }
+    .raffle-card { width: 44px; height: 62px; font-size: 9px; }
+    .raffle-card .card-num { font-size: 12px; }
+    #ticket-mode-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<div class="wrap">
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-mark" id="header-logo-mark">✦</div>
+        <div>
+          <div class="logo-text" id="header-title">사인회 추첨기</div>
+          <div class="logo-sub" id="header-sub">SIGN RAFFLE SYSTEM</div>
+        </div>
+      </div>
+      <div class="step-nav">
+        <div class="step-dot active" id="dot-0"></div>
+        <div class="step-dot" id="dot-1"></div>
+        <div class="step-dot" id="dot-2"></div>
+        <div class="step-dot" id="dot-3"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- SCREEN 1: SETUP -->
+  <div class="screen active" id="screen-0">
+    <div class="sec-title">STEP 01 / 04</div>
+    <div class="sec-head">
+      <h2>데이터 업로드 및 추첨 설정</h2>
+    </div>
+
+    <div class="notice">
+      ℹ️ 데이터는 브라우저에서만 처리되며 외부 서버로 전송되지 않습니다.
+    </div>
+
+    <!-- 이벤트 기본 정보 -->
+    <div class="card">
+      <div class="card-title">이벤트 정보 설정</div>
+      <div class="two-col" style="margin-bottom:0;">
+        <div>
+          <label>아이돌 / 이벤트 이름</label>
+          <input type="text" id="event-name" placeholder="예) PLAVE 영상통화 사인회" value="" oninput="updateEventName()">
+        </div>
+        <div>
+          <label>이벤트 날짜 (선택)</label>
+          <input type="text" id="event-date" placeholder="예) 2025-03-15" oninput="updateEventName()">
+        </div>
+      </div>
+    </div>
+
+    <!-- 멤버 설정 -->
+    <div class="card">
+      <div class="card-title">멤버 설정</div>
+      <div id="member-editor">
+        <!-- 멤버 행들이 JS로 렌더링됨 -->
+      </div>
+      <div class="btn-row" style="margin-top:12px;">
+        <button class="btn btn-outline" onclick="addMemberRow()" style="font-size:13px;">+ 멤버 추가</button>
+        <button class="btn btn-outline" onclick="resetToDefault()" style="font-size:13px;">PLAVE 기본값으로</button>
+      </div>
+      <div style="margin-top:14px; padding:10px 14px; background:var(--surface2); border-radius:8px; border:0.5px solid var(--border);">
+        <div style="font-size:11px; color:var(--muted); line-height:1.8;">
+          멤버 이름은 업로드 엑셀의 <span style="font-family:'Space Mono',monospace; color:var(--text);">멤버</span> 컬럼값과 정확히 일치해야 합니다.
+          &nbsp;·&nbsp; 추첨 인원: 해당 멤버 당첨자 수 &nbsp;·&nbsp; 색상: 추첨 화면 구분색
+        </div>
+      </div>
+    </div>
+
+    <!-- FILE UPLOAD -->
+    <div class="card">
+      <div class="card-title">응모 데이터 업로드</div>
+      <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
+        <div class="upload-icon">📁</div>
+        <div class="upload-text">CSV 또는 엑셀 파일을 클릭하여 업로드</div>
+        <div class="upload-sub">필수 컬럼: 휴대폰번호, 주문번호, 계정ID, 상품(멤버명)</div>
+      </div>
+      <input type="file" id="file-input" accept=".csv,.xlsx,.xls" onchange="handleFileUpload(this)">
+      <div id="upload-status" style="display:none;">
+        <div class="stat-row" id="upload-stats"></div>
+        <div class="data-table-wrap" id="preview-table-wrap"></div>
+      </div>
+      <div class="btn-row" style="margin-top:8px;">
+        <button class="btn btn-outline" onclick="loadSampleData()">샘플 데이터로 시작</button>
+      </div>
+    </div>
+
+    <!-- 응모권 부여 방식 -->
+    <div class="card">
+      <div class="card-title">응모권 부여 방식</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:4px;" id="ticket-mode-grid">
+
+        <button class="ticket-mode-btn active" data-mode="qty_per_album" onclick="setTicketMode(this)">
+          <div class="tm-icon">🎫</div>
+          <div class="tm-title">앨범 1개 = 추첨권 1장</div>
+          <div class="tm-desc">노아 3개 구매 시 노아풀에 3장 부여.<br>수량이 많을수록 당첨 확률 상승.</div>
+          <div class="tm-tag">수량 비례</div>
+        </button>
+
+        <button class="ticket-mode-btn" data-mode="one_per_member_order" onclick="setTicketMode(this)">
+          <div class="tm-icon">🎫</div>
+          <div class="tm-title">주문×멤버당 1장 고정</div>
+          <div class="tm-desc">노아 3개+밤비 5개 주문이면<br>노아풀 1장 + 밤비풀 1장.</div>
+          <div class="tm-tag">멤버별 고정</div>
+        </button>
+
+        <button class="ticket-mode-btn" data-mode="one_per_order" onclick="setTicketMode(this)">
+          <div class="tm-icon">🎫</div>
+          <div class="tm-title">주문번호당 1장 고정</div>
+          <div class="tm-desc">주문 1건 = 1장. 어떤 멤버를<br>몇 개 샀든 멤버풀 전체 통합 1장.</div>
+          <div class="tm-tag">주문 기준</div>
+        </button>
+
+        <button class="ticket-mode-btn" data-mode="one_per_account" onclick="setTicketMode(this)">
+          <div class="tm-icon">🎫</div>
+          <div class="tm-title">계정 ID당 1장 고정</div>
+          <div class="tm-desc">동일 계정의 복수 주문 통합.<br>1인 1추첨 완전 동등 방식.</div>
+          <div class="tm-tag">계정 기준</div>
+        </button>
+
+      </div>
+      <div id="ticket-mode-detail" style="margin-top:12px; padding:12px 16px; background:var(--surface2); border-radius:10px; border:0.5px solid var(--border2);">
+        <div style="display:flex; align-items:flex-start; gap:10px;">
+          <div style="font-size:20px; margin-top:1px;">📋</div>
+          <div>
+            <div id="tmd-title" style="font-size:13px; font-weight:500; margin-bottom:4px; color:var(--accent);"></div>
+            <div id="tmd-example" style="font-size:12px; color:var(--muted); line-height:1.8;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">추첨 모수 구분</div>
+        <div class="toggle-group">
+          <button class="toggle-btn active" onclick="setToggle(this,'pool')">멤버별 추첨</button>
+          <button class="toggle-btn" onclick="setToggle(this,'pool')">전체 통합</button>
+        </div>
+        <div style="font-size:12px; color: var(--muted);">멤버별: 해당 멤버 구매자 중 추첨</div>
+      </div>
+      <div class="card">
+        <div class="card-title">예비 당첨자 설정</div>
+        <label>멤버당 예비 당첨자 수</label>
+        <input type="number" min="0" max="20" value="3" id="reserve-count" placeholder="예비 인원 수">
+        <div style="font-size:12px; color:var(--muted); line-height:1.6;">
+          예비 당첨자는 결과 화면에서만 확인 가능하며 공개 추첨 시 노출되지 않습니다.
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="goToStep(1)" id="next-btn-0">
+        모수 확인하기 →
+      </button>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: POOL CHECK -->
+  <div class="screen" id="screen-1">
+    <div class="sec-title">STEP 02 / 04</div>
+    <div class="sec-head">
+      <h2>추첨 모수 확인</h2>
+      <span id="total-pool-label"></span>
+    </div>
+
+    <div class="card">
+      <div class="card-title">전체 응모 현황</div>
+      <div class="stat-row" id="pool-stats"></div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;" id="member-stats"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">멤버별 응모 데이터 미리보기</div>
+      <div class="tab-row" id="member-tabs"></div>
+      <div id="member-tab-contents"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">공정성 검증 지표</div>
+      <div class="fairness-bar">
+        <div class="fairness-icon">🔐</div>
+        <div class="fairness-label">난수 생성기</div>
+        <div class="fairness-val">CRYPTO API</div>
+      </div>
+      <div class="fairness-bar">
+        <div class="fairness-icon">🔀</div>
+        <div class="fairness-label">셔플 알고리즘</div>
+        <div class="fairness-val">FISHER-YATES</div>
+      </div>
+      <div class="fairness-bar">
+        <div class="fairness-icon">🔑</div>
+        <div class="fairness-label">추첨 시드 (재현용)</div>
+        <div class="fairness-val" id="seed-display">생성 대기중...</div>
+      </div>
+      <div class="fairness-bar">
+        <div class="fairness-icon">📊</div>
+        <div class="fairness-label">편향도 (낮을수록 공정)</div>
+        <div class="fairness-val">0.000%</div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-outline" onclick="goToStep(0)">← 뒤로</button>
+      <button class="btn btn-primary" onclick="goToStep(2)">추첨 시작하기 →</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: RAFFLE (PUBLIC FACING) -->
+  <div class="screen" id="screen-2">
+    <div class="sec-title">STEP 03 / 04 · LIVE RAFFLE</div>
+    <div class="sec-head">
+      <h2>추첨 진행</h2>
+    </div>
+
+    <div class="raffle-stage" id="raffle-stage">
+      <div class="seed-display" id="live-seed">SEED: 준비중...</div>
+
+      <div class="status-row">
+        <div class="status-dot idle" id="status-dot"></div>
+        <div class="status-text" id="status-text">추첨 준비 완료</div>
+      </div>
+
+      <div class="shuffle-area" id="shuffle-area"></div>
+
+      <div class="progress-wrap" style="width:100%; max-width:420px;">
+        <div class="progress-label">
+          <span id="progress-label-left">준비중</span>
+          <span id="progress-label-right">0%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CURRENTLY DRAWING MEMBER -->
+    <div id="current-member-panel" style="display:none;" class="card">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div id="current-member-dot" style="width:12px; height:12px; border-radius:50%;"></div>
+        <div id="current-member-name" style="font-size:18px; font-weight:500;"></div>
+        <div id="current-member-count" style="font-size:13px; color: var(--muted);"></div>
+      </div>
+    </div>
+
+    <!-- LIVE WINNERS -->
+    <div id="live-winners-wrap" style="display:none;">
+      <div class="card-title" style="margin-bottom:12px; padding-top:4px;">당첨자</div>
+      <div id="live-winners-list"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="start-raffle-btn" onclick="startRaffle()">
+        ▶ 추첨 시작
+      </button>
+      <button class="btn btn-outline" id="next-member-btn" style="display:none;" onclick="drawNextMember()">
+        다음 멤버 추첨 →
+      </button>
+    </div>
+  </div>
+
+  <!-- SCREEN 4: RESULTS -->
+  <div class="screen" id="screen-3">
+    <div class="sec-title">STEP 04 / 04</div>
+    <div class="sec-head">
+      <h2>추첨 결과</h2>
+    </div>
+
+    <div class="stat-row" id="result-stats"></div>
+
+    <div class="tab-row" id="result-tabs"></div>
+    <div id="result-tab-contents"></div>
+
+    <div class="btn-row">
+      <button class="btn btn-outline" onclick="downloadCSV()">📥 결과 CSV 저장</button>
+      <button class="btn btn-danger" onclick="resetAll()">처음부터 다시</button>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<script>
+// === STARS ===
+(function() {
+  const c = document.getElementById('stars');
+  for (let i = 0; i < 80; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const sz = Math.random() * 1.5 + 0.5;
+    s.style.cssText = `
+      left:${Math.random()*100}%;
+      top:${Math.random()*100}%;
+      width:${sz}px; height:${sz}px;
+      --d:${(Math.random()*4+2).toFixed(1)}s;
+      --a:${(Math.random()*0.15+0.05).toFixed(2)};
+      --b:${(Math.random()*0.4+0.2).toFixed(2)};
+      animation-delay:${(Math.random()*4).toFixed(1)}s;
+    `;
+    c.appendChild(s);
+  }
+})();
+
+// === STATE ===
+const DEFAULT_MEMBERS = [
+  { name:'연호', color:'#7B9FFF', count:1, active:true },
+  { name:'밤비', color:'#FF7BAC', count:1, active:true },
+  { name:'노아', color:'#7BFFE0', count:1, active:true },
+  { name:'은호', color:'#FFD97B', count:1, active:true },
+  { name:'하민', color:'#C47BFF', count:1, active:true },
+];
+const PALETTE = ['#7B9FFF','#FF7BAC','#7BFFE0','#FFD97B','#C47BFF',
+                 '#FF9F7B','#7BFFB0','#FF7BE8','#7BCFFF','#FFDA7B'];
+
+const state = {
+  rawData: [],
+  filteredData: [],
+  members: DEFAULT_MEMBERS.map(m => ({...m})),
+  settings: {
+    ticketMode: 'qty_per_album',
+    poolMode: 'member',
+    reserve: 3,
+    eventName: '',
+    eventDate: '',
+  },
+  pools: {},
+  winners: {},
+  reserves: {},
+  currentStep: 0,
+  seed: null
+};
+
+function getMemberColor(name) {
+  const m = state.members.find(m => m.name === name);
+  const c = m ? m.color : '#888888';
+  return { color: c, bg: c + '26' };
+}
+function getActiveMembers() { return state.members.filter(m => m.active); }
+
+// === MEMBER EDITOR ===
+const MEMBER_COLORS = {}; // kept for compat — dynamically pulled via getMemberColor
+
+function renderMemberEditor() {
+  const el = document.getElementById('member-editor');
+  el.innerHTML = state.members.map((m, i) => `
+    <div class="member-editor-row" id="mrow-${i}" data-idx="${i}">
+      <input type="checkbox" class="member-active-cb" ${m.active ? 'checked' : ''}
+        onchange="toggleMemberActive(${i}, this.checked)"
+        style="width:16px; height:16px; cursor:pointer; accent-color:${m.color}; flex-shrink:0;">
+      <input type="color" value="${m.color}" title="색상"
+        onchange="updateMemberField(${i},'color',this.value)"
+        style="width:28px; height:28px; border:none; border-radius:6px; cursor:pointer; padding:0; background:none; flex-shrink:0;">
+      <input type="text" value="${m.name}" placeholder="멤버명"
+        oninput="updateMemberField(${i},'name',this.value)"
+        style="margin-bottom:0; flex:1; min-width:80px; border-color:${m.color}40;">
+      <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+        <span style="font-size:12px; color:var(--muted); white-space:nowrap;">당첨</span>
+        <input type="number" min="1" max="999" value="${m.count}"
+          oninput="updateMemberField(${i},'count',parseInt(this.value)||1)"
+          style="margin-bottom:0; width:60px; text-align:center;">
+        <span style="font-size:12px; color:var(--muted);">명</span>
+      </div>
+      <button onclick="removeMember(${i})" title="삭제"
+        style="background:none; border:0.5px solid var(--border2); border-radius:6px; color:var(--muted); cursor:pointer; padding:4px 8px; font-size:12px; flex-shrink:0; transition:all 0.2s;"
+        onmouseover="this.style.color='#ff8a8a'; this.style.borderColor='#ff8a8a40';"
+        onmouseout="this.style.color='var(--muted)'; this.style.borderColor='var(--border2)';">✕</button>
+    </div>
+  `).join('');
+}
+
+function updateMemberField(idx, field, val) {
+  state.members[idx][field] = val;
+  // live-update color swatch on name input border
+  if (field === 'color') {
+    const row = document.getElementById(`mrow-${idx}`);
+    if (row) row.querySelector('input[type=text]').style.borderColor = val + '40';
+  }
+}
+function toggleMemberActive(idx, checked) { state.members[idx].active = checked; }
+function removeMember(idx) {
+  if (state.members.length <= 1) return alert('멤버는 최소 1명 이상이어야 합니다.');
+  state.members.splice(idx, 1);
+  renderMemberEditor();
+}
+function addMemberRow() {
+  const color = PALETTE[state.members.length % PALETTE.length];
+  state.members.push({ name: '', color, count: 1, active: true });
+  renderMemberEditor();
+  // focus new name input
+  setTimeout(() => {
+    const rows = document.querySelectorAll('.member-editor-row');
+    const last = rows[rows.length - 1];
+    if (last) last.querySelector('input[type=text]').focus();
+  }, 50);
+}
+function resetToDefault() {
+  state.members = DEFAULT_MEMBERS.map(m => ({...m}));
+  renderMemberEditor();
+}
+
+// === EVENT NAME ===
+function updateEventName() {
+  const name = document.getElementById('event-name').value.trim();
+  const date = document.getElementById('event-date').value.trim();
+  state.settings.eventName = name;
+  state.settings.eventDate = date;
+  const display = name || '사인회 추첨기';
+  const abbr = name ? name.slice(0,2).toUpperCase() : '✦';
+  document.getElementById('header-title').textContent = display;
+  document.getElementById('header-logo-mark').textContent = abbr;
+  document.getElementById('header-sub').textContent = date || 'SIGN RAFFLE SYSTEM';
+  document.title = display;
+}
+
+// === CRYPTO RANDOM ===
+function cryptoRandom() {
+  const arr = new Uint32Array(1);
+  crypto.getRandomValues(arr);
+  return arr[0] / (0xFFFFFFFF + 1);
+}
+
+function generateSeed() {
+  const arr = new Uint32Array(2);
+  crypto.getRandomValues(arr);
+  return (arr[0].toString(16) + arr[1].toString(16)).toUpperCase().slice(0,16);
+}
+
+// Fisher-Yates shuffle with crypto random
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(cryptoRandom() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// === SAMPLE DATA ===
+function loadSampleData() {
+  const members = ['연호','밤비','노아','은호','하민'];
+  const names = ['김민준','이서윤','박지호','최유진','정다은','한승현','오나연','임지수',
+                 '강태양','신예린','윤도현','배소희','류준혁','문아린','허성민','양채원',
+                 '조민서','노지안','전하은','김준영'];
+  const data = [];
+  let orderNum = 20240001;
+
+  for (let i = 0; i < 80; i++) {
+    const name = names[i % names.length];
+    const phone = `010-${String(Math.floor(Math.random()*9000)+1000)}-${String(Math.floor(Math.random()*9000)+1000)}`;
+    const account = `user_${String(i+1).padStart(4,'0')}`;
+    const orderNo = `ORD-${orderNum++}`;
+    // 1~3종류 멤버 앨범
+    const nMembers = Math.random() < 0.55 ? 1 : Math.random() < 0.7 ? 2 : 3;
+    const chosen = [...members].sort(()=>Math.random()-0.5).slice(0, nMembers);
+    let totalQty = 0;
+    const items = chosen.map(m => {
+      const qty = Math.random() < 0.4 ? Math.floor(Math.random()*4)+1 : Math.floor(Math.random()*8)+5;
+      totalQty += qty;
+      return { member: m, qty };
+    });
+    items.forEach(({ member, qty }) => {
+      data.push({
+        '주문번호': orderNo,
+        '주문자명': name,
+        '휴대폰번호': phone,
+        '계정ID': account,
+        '주문일': `2024-${String(Math.floor(Math.random()*3)+10).padStart(2,'0')}-${String(Math.floor(Math.random()*28)+1).padStart(2,'0')}`,
+        '멤버': member,
+        '멤버별수량': qty,
+        '주문총수량': totalQty
+      });
+    });
+  }
+  state.rawData = data;
+  renderUploadStatus();
+}
+
+function handleFileUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.name.endsWith('.csv')) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const lines = e.target.result.split('\n').filter(l => l.trim());
+      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g,''));
+      const data = lines.slice(1).map(line => {
+        const vals = line.split(',').map(v => v.trim().replace(/"/g,''));
+        const obj = {};
+        headers.forEach((h, i) => { obj[h] = vals[i] || ''; });
+        return obj;
+      }).filter(r => Object.values(r).some(v => v));
+      state.rawData = data;
+      renderUploadStatus();
+    };
+    reader.readAsText(file, 'UTF-8');
+  } else {
+    alert('CSV 파일을 업로드해주세요. (Excel은 CSV로 저장 후 업로드)');
+  }
+}
+
+function renderUploadStatus() {
+  const el = document.getElementById('upload-status');
+  const statsEl = document.getElementById('upload-stats');
+  const area = document.getElementById('upload-area');
+  el.style.display = 'block';
+  area.classList.add('has-data');
+
+  const total = state.rawData.length;
+  const members = [...new Set(state.rawData.map(r => r['상품']))];
+  const uniqueOrders = [...new Set(state.rawData.map(r => r['주문번호']))].length;
+  const uniquePhones = [...new Set(state.rawData.map(r => r['휴대폰번호']))].length;
+
+  statsEl.innerHTML = `
+    <div class="stat-chip"><div class="val">${total}</div><div class="lbl">전체 응모 건수</div></div>
+    <div class="stat-chip"><div class="val">${uniqueOrders}</div><div class="lbl">고유 주문번호</div></div>
+    <div class="stat-chip"><div class="val">${uniquePhones}</div><div class="lbl">고유 휴대폰</div></div>
+    <div class="stat-chip"><div class="val">${members.length}</div><div class="lbl">멤버 수</div></div>
+  `;
+
+  // Preview table
+  const preview = state.rawData.slice(0, 8);
+  const headers = Object.keys(preview[0] || {});
+  let html = `<table class="data-table"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>`;
+  preview.forEach(row => {
+    const member = row['상품'] || '';
+    const mc = MEMBER_COLORS[member];
+    html += `<tr>${headers.map(h => {
+      if (h === '상품') return `<td class="member-cell" style="color:${mc ? mc.color : 'inherit'}">${row[h]||''}</td>`;
+      if (h === '휴대폰번호') {
+        const masked = (row[h]||'').replace(/(\d{4})$/, '****');
+        return `<td>${masked}</td>`;
+      }
+      return `<td>${row[h]||''}</td>`;
+    }).join('')}</tr>`;
+  });
+  if (state.rawData.length > 8) html += `<tr><td colspan="${headers.length}" style="text-align:center; color: var(--muted); padding:10px;">... 외 ${state.rawData.length - 8}건</td></tr>`;
+  html += '</tbody></table>';
+  document.getElementById('preview-table-wrap').innerHTML = html;
+}
+
+// === TICKET MODE ===
+const TICKET_MODE_INFO = {
+  qty_per_album: {
+    title: '앨범 1개 = 추첨권 1장 (수량 비례)',
+    example: '예) 노아 3개 구매 → 노아풀에 추첨권 3장\n예) 밤비 1개 구매 → 밤비풀에 추첨권 1장\n구매 수량이 많을수록 당첨 확률이 높아집니다.'
+  },
+  one_per_member_order: {
+    title: '주문×멤버 조합당 1장 고정 (멤버별 고정)',
+    example: '예) 노아 3개 + 밤비 5개 주문 → 노아풀 1장 + 밤비풀 1장\n같은 주문에서 노아를 몇 개 샀든 노아풀엔 1장만 들어갑니다.'
+  },
+  one_per_order: {
+    title: '주문번호당 1장 고정 (주문 기준)',
+    example: '예) 노아 3개 + 밤비 5개 주문 → 전체 추첨풀에 1장만 부여\n어떤 멤버를 얼마나 샀든 주문 1건 = 1장입니다.\n※ 멤버별 풀 모드와 함께 쓸 경우, 각 멤버풀에 1장씩 들어갑니다.'
+  },
+  one_per_account: {
+    title: '계정 ID당 1장 고정 (계정 기준)',
+    example: '예) 동일 계정으로 여러 주문을 했어도 추첨권은 1장\n가장 엄격한 1인 1추첨 방식입니다.'
+  }
+};
+
+function setTicketMode(btn) {
+  document.querySelectorAll('.ticket-mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const mode = btn.dataset.mode;
+  state.settings.ticketMode = mode;
+  const info = TICKET_MODE_INFO[mode];
+  document.getElementById('tmd-title').textContent = info.title;
+  document.getElementById('tmd-example').innerHTML = info.example.replace(/\n/g, '<br>');
+}
+
+// init detail on load
+setTimeout(() => {
+  const info = TICKET_MODE_INFO[state.settings.ticketMode];
+  document.getElementById('tmd-title').textContent = info.title;
+  document.getElementById('tmd-example').innerHTML = info.example.replace(/\n/g, '<br>');
+}, 0);
+
+// === TOGGLE HELPERS ===
+function setToggle(btn, group) {
+  btn.closest('.card, .two-col').querySelectorAll(`.toggle-btn`).forEach(b => {
+    if (b.onclick && b.onclick.toString().includes(`'${group}'`)) b.classList.remove('active');
+  });
+  btn.classList.add('active');
+  if (group === 'pool') state.settings.poolMode = btn.textContent.includes('멤버별') ? 'member' : 'all';
+}
+
+function toggleMember(btn) {
+  btn.classList.toggle('active');
+  const member = btn.dataset.member;
+  if (btn.classList.contains('active')) {
+    if (!state.settings.activeMembers.includes(member)) state.settings.activeMembers.push(member);
+  } else {
+    state.settings.activeMembers = state.settings.activeMembers.filter(m => m !== member);
+  }
+}
+
+// === NAVIGATION ===
+function goToStep(step) {
+  if (step === 1 && state.rawData.length === 0) loadSampleData();
+
+  state.settings.reserve = parseInt(document.getElementById('reserve-count').value) || 3;
+
+  // validate members
+  if (step === 1) {
+    const valid = state.members.filter(m => m.name.trim() && m.active);
+    if (valid.length === 0) { alert('추첨할 멤버를 1명 이상 활성화해주세요.'); return; }
+    buildPools();
+  }
+  if (step === 2) prepareRaffle();
+  if (step === 3) buildResults();
+
+  document.querySelectorAll('.screen').forEach((s, i) => s.classList.toggle('active', i === step));
+  document.querySelectorAll('.step-dot').forEach((d, i) => d.classList.toggle('active', i <= step));
+  state.currentStep = step;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// === BUILD POOLS ===
+function buildPools() {
+  const mode = state.settings.ticketMode;
+  const activeMembers = getActiveMembers().map(m => m.name.trim()).filter(Boolean);
+
+  // ── 내부 필터: 주문총수량 5개 미만 제거 (비공개) ──
+  const orderTotalQty = {};
+  state.rawData.forEach(r => {
+    const ono = r['주문번호'] || '';
+    if (r['주문총수량']) {
+      orderTotalQty[ono] = parseInt(r['주문총수량']) || 0;
+    } else {
+      orderTotalQty[ono] = (orderTotalQty[ono] || 0) + (parseInt(r['멤버별수량'] || r['수량']) || 1);
+    }
+  });
+
+  let eligible = state.rawData.filter(r => {
+    const total = orderTotalQty[r['주문번호']] || parseInt(r['주문총수량'] || r['수량']) || 0;
+    return total >= 5;
+  });
+  if (eligible.length < 10) eligible = state.rawData;
+
+  state.filteredData = eligible;
+
+  // ── 응모권 방식별 풀 생성 ──
+  state.pools = {};
+  activeMembers.forEach(m => { state.pools[m] = []; });
+
+  if (mode === 'qty_per_album') {
+    eligible.forEach(r => {
+      const m = r['멤버'] || r['상품'] || '';
+      if (!activeMembers.includes(m)) return;
+      const qty = parseInt(r['멤버별수량'] || r['수량']) || 1;
+      for (let i = 0; i < qty; i++) state.pools[m].push({ ...r, _ticketIdx: i+1, _totalTickets: qty });
+    });
+  } else if (mode === 'one_per_member_order') {
+    const seen = new Set();
+    eligible.forEach(r => {
+      const m = r['멤버'] || r['상품'] || '';
+      if (!activeMembers.includes(m)) return;
+      const key = `${r['주문번호']}__${m}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      state.pools[m].push({ ...r });
+    });
+  } else if (mode === 'one_per_order') {
+    const seen = new Set();
+    eligible.forEach(r => {
+      const m = r['멤버'] || r['상품'] || '';
+      if (!activeMembers.includes(m)) return;
+      const key = `${r['주문번호']}__${m}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      state.pools[m].push({ ...r });
+    });
+  } else if (mode === 'one_per_account') {
+    const seen = new Set();
+    eligible.forEach(r => {
+      const m = r['멤버'] || r['상품'] || '';
+      if (!activeMembers.includes(m)) return;
+      const acct = r['계정ID'] || r['휴대폰번호'] || r['주문번호'];
+      const key = `${acct}__${m}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      state.pools[m].push({ ...r });
+    });
+  }
+
+  state.seed = generateSeed();
+  document.getElementById('seed-display').textContent = state.seed;
+  renderPoolScreen();
+}
+
+function renderPoolScreen() {
+  const activeMembers = getActiveMembers().map(m => m.name.trim()).filter(Boolean);
+  const totalTickets = activeMembers.reduce((s,m) => s + (state.pools[m]||[]).length, 0);
+  const uniqueOrders = [...new Set(state.filteredData.map(r => r['주문번호']))].length;
+  const modeInfo = TICKET_MODE_INFO[state.settings.ticketMode];
+
+  document.getElementById('total-pool-label').textContent = `총 ${totalTickets}장`;
+
+  document.getElementById('pool-stats').innerHTML = `
+    <div class="stat-chip"><div class="val">${totalTickets}</div><div class="lbl">총 추첨권 수</div></div>
+    <div class="stat-chip"><div class="val">${uniqueOrders}</div><div class="lbl">고유 주문</div></div>
+    <div class="stat-chip"><div class="val">${activeMembers.length}</div><div class="lbl">추첨 멤버</div></div>
+    <div class="stat-chip" style="flex:2; min-width:160px;"><div class="val" style="font-size:12px; font-family:'Noto Sans KR',sans-serif;">${modeInfo.title}</div><div class="lbl">적용된 응모권 방식</div></div>
+  `;
+
+  document.getElementById('member-stats').innerHTML = activeMembers.map(m => {
+    const mc = getMemberColor(m);
+    const cnt = (state.pools[m] || []).length;
+    return `<div class="member-stat" style="border-color:${mc.color}; background:${mc.bg};">
+      <div class="m-name" style="color:${mc.color}">${m}</div>
+      <div class="m-count" style="color:${mc.color}">${cnt}</div>
+      <div class="m-lbl" style="color:${mc.color}">추첨권</div>
+    </div>`;
+  }).join('');
+
+  const isQtyMode = state.settings.ticketMode === 'qty_per_album';
+  document.getElementById('member-tabs').innerHTML = activeMembers.map((m, i) =>
+    `<button class="tab-btn ${i===0?'active':''}" onclick="switchTab(this,'pool',${i})">${m} (${(state.pools[m]||[]).length}장)</button>`
+  ).join('');
+
+  document.getElementById('member-tab-contents').innerHTML = activeMembers.map((m, i) => {
+    const pool = state.pools[m] || [];
+    const mc = getMemberColor(m);
+    const personMap = {};
+    pool.forEach(r => {
+      const key = (r['주문번호']||'') + '__' + (r['멤버']||r['상품']);
+      if (!personMap[key]) personMap[key] = { r, tickets: 0 };
+      personMap[key].tickets++;
+    });
+    const persons = Object.values(personMap);
+    let html = `<div class="tab-content ${i===0?'active':''}" id="pool-tab-${i}">`;
+    if (!pool.length) {
+      html += `<div style="text-align:center;padding:24px;color:var(--muted);">응모자 없음</div>`;
+    } else {
+      html += `<div class="data-table-wrap"><table class="data-table"><thead><tr>
+        <th>#</th><th>이름</th><th>휴대폰번호</th><th>주문번호</th><th>멤버</th>${isQtyMode?'<th>추첨권</th>':''}
+      </tr></thead><tbody>`;
+      persons.slice(0,12).forEach(({r, tickets}, idx) => {
+        const phone = (r['휴대폰번호']||'').replace(/(\d{4})$/,'****');
+        const name = r['이름']||r['주문자명']||r['계정ID']||'-';
+        html += `<tr>
+          <td style="color:var(--dim)">${idx+1}</td><td>${name}</td><td>${phone}</td>
+          <td style="font-family:'Space Mono',monospace;font-size:11px;">${r['주문번호']||''}</td>
+          <td style="color:${mc.color};font-weight:700">${r['멤버']||r['상품']||''}</td>
+          ${isQtyMode?`<td style="text-align:center;color:var(--accent);font-weight:700;font-family:'Space Mono',monospace;">${tickets}장</td>`:''}
+        </tr>`;
+      });
+      if (persons.length > 12) html += `<tr><td colspan="${isQtyMode?6:5}" style="text-align:center;color:var(--muted);padding:8px;">... 외 ${persons.length-12}명</td></tr>`;
+      html += '</tbody></table></div>';
+    }
+    return html + '</div>';
+  }).join('');
+}
+
+function switchTab(btn, prefix, idx) {
+  const parent = btn.closest('.card, [id]');
+  btn.closest('.tab-row').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll(`[id^="${prefix}-tab-"]`).forEach(c => c.classList.remove('active'));
+  document.getElementById(`${prefix}-tab-${idx}`).classList.add('active');
+}
+
+// === RAFFLE PREPARATION ===
+function prepareRaffle() {
+  state.winners = {};
+  state.reserves = {};
+
+  document.getElementById('live-seed').textContent = `SEED: ${state.seed}`;
+  document.getElementById('status-dot').className = 'status-dot idle';
+  document.getElementById('status-text').textContent = '추첨 준비 완료';
+  document.getElementById('progress-fill').style.width = '0%';
+  document.getElementById('progress-label-left').textContent = '준비중';
+  document.getElementById('progress-label-right').textContent = '0%';
+  document.getElementById('live-winners-wrap').style.display = 'none';
+  document.getElementById('live-winners-list').innerHTML = '';
+  document.getElementById('current-member-panel').style.display = 'none';
+  document.getElementById('next-member-btn').style.display = 'none';
+  document.getElementById('start-raffle-btn').style.display = 'inline-flex';
+
+  const shuffleArea = document.getElementById('shuffle-area');
+  shuffleArea.innerHTML = '';
+  const activeNames = getActiveMembers().map(m => m.name.trim()).filter(Boolean);
+  const allEntries = activeNames.flatMap(m => (state.pools[m]||[]).slice(0,3).map(e => ({...e,_member:m})));
+  shuffle(allEntries).slice(0,14).forEach((entry, i) => {
+    const mc = getMemberColor(entry._member);
+    const card = document.createElement('div');
+    card.className = 'raffle-card face-down';
+    card.style.borderColor = mc.color;
+    card.innerHTML = `<div class="card-num">${String(i+1).padStart(2,'0')}</div><div class="card-member">${entry._member}</div>`;
+    card.dataset.member = entry._member;
+    shuffleArea.appendChild(card);
+  });
+}
+
+// === RAFFLE EXECUTION ===
+let raffleRunning = false;
+let memberQueue = [];
+
+function startRaffle() {
+  if (raffleRunning) return;
+  raffleRunning = true;
+  document.getElementById('start-raffle-btn').style.display = 'none';
+  document.getElementById('status-dot').className = 'status-dot running';
+  document.getElementById('live-winners-wrap').style.display = 'block';
+  memberQueue = getActiveMembers().map(m => m.name.trim()).filter(Boolean);
+  drawNextMember();
+}
+
+async function drawNextMember() {
+  document.getElementById('next-member-btn').style.display = 'none';
+  if (memberQueue.length === 0) { finishRaffle(); return; }
+  const member = memberQueue.shift();
+  const mc = getMemberColor(member);
+  const pool = shuffle(state.pools[member] || []);
+  const mObj = state.members.find(m => m.name === member);
+  const count = mObj ? mObj.count : 1;
+  const reserveCount = state.settings.reserve;
+
+  document.getElementById('current-member-panel').style.display = 'block';
+  document.getElementById('current-member-dot').style.background = mc.color;
+  document.getElementById('current-member-name').textContent = `${member} 멤버 추첨 중`;
+  document.getElementById('current-member-count').textContent = `총 ${pool.length}장 중 ${count}명 추첨`;
+  document.getElementById('status-text').textContent = `${member} 멤버 추첨중...`;
+
+  await animateShuffleCards(member, mc);
+
+  const activeNames = getActiveMembers().map(m => m.name.trim()).filter(Boolean);
+  const total = activeNames.length;
+  const done = total - memberQueue.length;
+  const pct = Math.round((done / total) * 100);
+  document.getElementById('progress-fill').style.width = `${pct}%`;
+  document.getElementById('progress-label-right').textContent = `${pct}%`;
+  document.getElementById('progress-label-left').textContent = `${done}/${total} 멤버`;
+
+  const picked = pool.slice(0, count);
+  const reserves = pool.slice(count, count + reserveCount);
+  state.winners[member] = picked;
+  state.reserves[member] = reserves;
+
+  await revealWinners(member, picked, mc);
+
+  if (memberQueue.length > 0) {
+    document.getElementById('next-member-btn').style.display = 'inline-flex';
+    document.getElementById('next-member-btn').textContent = `${memberQueue[0]} 멤버 추첨하기 →`;
+    document.getElementById('status-text').textContent = `${member} 추첨 완료`;
+    document.getElementById('status-dot').className = 'status-dot done';
+  } else {
+    setTimeout(finishRaffle, 1500);
+  }
+}
+
+async function animateShuffleCards(member, mc) {
+  const cards = document.querySelectorAll('.raffle-card');
+  for (let iter = 0; iter < 5; iter++) {
+    cards.forEach((card, i) => { card.classList.add('card-shuffle'); card.style.animationDelay = `${i*0.03}s`; });
+    await sleep(400);
+    cards.forEach(c => c.classList.remove('card-shuffle'));
+    if (iter === 4) {
+      cards.forEach(c => {
+        if (c.dataset.member === member) {
+          c.style.borderColor = mc.color; c.style.background = mc.bg;
+          c.classList.remove('face-down'); c.classList.add('card-flip');
+        }
+      });
+      await sleep(600);
+    }
+  }
+}
+
+async function revealWinners(member, picked, mc) {
+  const listEl = document.getElementById('live-winners-list');
+  const existingCount = listEl.querySelectorAll('.winner-card').length;
+  for (let i = 0; i < picked.length; i++) {
+    await sleep(400);
+    const r = picked[i];
+    const phone = (r['휴대폰번호']||'').replace(/(\d{4})$/,'****');
+    const name = r['이름']||r['주문자명']||r['계정ID']||'응모자';
+    const card = document.createElement('div');
+    card.className = 'winner-card';
+    card.innerHTML = `
+      <div class="winner-rank">#${existingCount+i+1}</div>
+      <div class="winner-member-badge" style="background:${mc.bg};color:${mc.color};">${member}</div>
+      <div class="winner-info">
+        <div class="winner-name">${name}</div>
+        <div class="winner-detail">${phone} · ${r['주문번호']||''}</div>
+      </div>`;
+    listEl.appendChild(card);
+    card.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+}
+
+function finishRaffle() {
+  raffleRunning = false;
+  document.getElementById('status-dot').className = 'status-dot done';
+  document.getElementById('status-text').textContent = '모든 추첨 완료!';
+  document.getElementById('progress-fill').style.width = '100%';
+  document.getElementById('progress-label-right').textContent = '100%';
+  document.getElementById('current-member-panel').style.display = 'none';
+  setTimeout(() => goToStep(3), 1500);
+}
+
+// === RESULTS ===
+function buildResults() {
+  const activeMembers = getActiveMembers().map(m => m.name.trim()).filter(Boolean);
+  const totalWinners = activeMembers.reduce((s,m) => s+(state.winners[m]||[]).length, 0);
+  const eventLabel = state.settings.eventName || '사인회 추첨기';
+
+  document.getElementById('result-stats').innerHTML = `
+    <div class="stat-chip"><div class="val">${totalWinners}</div><div class="lbl">총 당첨자</div></div>
+    <div class="stat-chip"><div class="val">${activeMembers.length}</div><div class="lbl">추첨 멤버</div></div>
+    <div class="stat-chip"><div class="val">${state.filteredData.length}</div><div class="lbl">총 모수</div></div>
+  `;
+
+  document.getElementById('result-tabs').innerHTML = activeMembers.map((m,i) =>
+    `<button class="tab-btn ${i===0?'active':''}" onclick="switchTab(this,'result',${i})">${m}</button>`
+  ).join('');
+
+  document.getElementById('result-tab-contents').innerHTML = activeMembers.map((m,i) => {
+    const winners = state.winners[m]||[];
+    const reserves = state.reserves[m]||[];
+    const mc = getMemberColor(m);
+    let html = `<div class="tab-content ${i===0?'active':''}" id="result-tab-${i}">`;
+    html += `<div class="card-title" style="margin-bottom:12px;">🏆 당첨자 (${winners.length}명)</div>`;
+    winners.forEach((r,idx) => {
+      const phone = (r['휴대폰번호']||'').replace(/(\d{4})$/,'****');
+      html += `<div class="winner-card">
+        <div class="winner-rank">#${idx+1}</div>
+        <div class="winner-member-badge" style="background:${mc.bg};color:${mc.color};">${m}</div>
+        <div class="winner-info">
+          <div class="winner-name">${r['이름']||r['주문자명']||r['계정ID']||'응모자'}</div>
+          <div class="winner-detail">${phone} · ${r['주문번호']||''}</div>
+        </div>
+        <div style="font-size:11px;background:rgba(123,255,159,0.12);color:#7BFF9F;padding:4px 10px;border-radius:6px;font-weight:700;">당첨</div>
+      </div>`;
+    });
+    if (reserves.length > 0) {
+      html += `<div class="card-title" style="margin-bottom:12px;margin-top:20px;color:var(--dim);">📋 예비 당첨자 (관리자 전용)</div>`;
+      reserves.forEach((r,idx) => {
+        const phone = (r['휴대폰번호']||'').replace(/(\d{4})$/,'****');
+        html += `<div class="winner-card" style="opacity:0.6;border-style:dashed;">
+          <div class="winner-rank" style="color:var(--dim)">예${idx+1}</div>
+          <div class="winner-member-badge" style="background:var(--surface2);color:var(--muted);">${m}</div>
+          <div class="winner-info">
+            <div class="winner-name">${r['이름']||r['주문자명']||r['계정ID']||'응모자'}</div>
+            <div class="winner-detail">${phone} · ${r['주문번호']||''}</div>
+          </div>
+          <div style="font-size:11px;background:var(--surface2);color:var(--muted);padding:4px 10px;border-radius:6px;">예비</div>
+        </div>`;
+      });
+    }
+    return html + '</div>';
+  }).join('');
+}
+
+function downloadCSV() {
+  const activeMembers = getActiveMembers().map(m => m.name.trim()).filter(Boolean);
+  const eventLabel = state.settings.eventName || '사인회추첨';
+  const rows = [['이벤트', '멤버','순위','이름','휴대폰번호','주문번호','계정ID','구분']];
+  activeMembers.forEach(m => {
+    (state.winners[m]||[]).forEach((r,i) =>
+      rows.push([eventLabel, m, i+1, r['이름']||r['주문자명']||'', r['휴대폰번호']||'', r['주문번호']||'', r['계정ID']||'', '당첨'])
+    );
+    (state.reserves[m]||[]).forEach((r,i) =>
+      rows.push([eventLabel, m, `예비${i+1}`, r['이름']||r['주문자명']||'', r['휴대폰번호']||'', r['주문번호']||'', r['계정ID']||'', '예비'])
+    );
+  });
+  const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${eventLabel}_추첨결과_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function resetAll() {
+  if (!confirm('처음부터 다시 시작하시겠습니까? 현재 추첨 결과가 초기화됩니다.')) return;
+  state.rawData = []; state.filteredData = [];
+  state.winners = {}; state.reserves = {}; state.pools = {};
+  raffleRunning = false;
+  document.getElementById('upload-status').style.display = 'none';
+  document.getElementById('upload-area').classList.remove('has-data');
+  document.getElementById('file-input').value = '';
+  goToStep(0);
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// === INIT ===
+renderMemberEditor();
+</script>
+</body>
+</html>
