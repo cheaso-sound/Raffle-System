@@ -573,7 +573,7 @@
         <button class="ticket-mode-btn" data-mode="one_per_order" onclick="setTicketMode(this)">
           <div class="tm-icon">🎫</div>
           <div class="tm-title">주문번호당 1장 고정</div>
-          <div class="tm-desc">주문 1건 = 1장. 어떤 멤버를<br>몇 개 샀든 멤버풀 전체 통합 1장.</div>
+          <div class="tm-desc">주문 1건 = 1장. 수량이 가장 많은<br>멤버 풀에 응모 (동률이면 첫 번째).</div>
           <div class="tm-tag">주문 기준</div>
         </button>
 
@@ -603,11 +603,11 @@
           CSV의 어떤 컬럼을 멤버 구분 기준으로 사용할지 선택하세요.
         </div>
         <div class="toggle-group">
-          <button class="toggle-btn active" id="field-btn-product" onclick="setMemberField('상품명')">상품명</button>
-          <button class="toggle-btn" id="field-btn-option" onclick="setMemberField('옵션명')">옵션명</button>
+          <button class="toggle-btn" id="field-btn-product" onclick="setMemberField('상품명')">상품명</button>
+          <button class="toggle-btn active" id="field-btn-option" onclick="setMemberField('옵션명')">옵션명</button>
         </div>
         <div id="member-field-desc" style="font-size:12px; color:var(--muted); margin-top:8px; line-height:1.6;">
-          CSV <span style="font-family:'Space Mono',monospace; color:var(--text);">상품명</span> 컬럼값을 멤버 구분 기준으로 사용합니다.
+          CSV <span style="font-family:'Space Mono',monospace; color:var(--text);">옵션명</span> 컬럼값을 멤버 구분 기준으로 사용합니다.
         </div>
       </div>
       <div class="card">
@@ -818,10 +818,10 @@
 
 // === STATE ===
 const DEFAULT_MEMBERS = [
-  { name:'연호', color:'#7B9FFF', count:1, active:true },
-  { name:'밤비', color:'#FF7BAC', count:1, active:true },
-  { name:'노아', color:'#7BFFE0', count:1, active:true },
   { name:'은호', color:'#FFD97B', count:1, active:true },
+  { name:'밤비', color:'#FF7BAC', count:1, active:true },
+  { name:'예준', color:'#7B9FFF', count:1, active:true },
+  { name:'노아', color:'#7BFFE0', count:1, active:true },
   { name:'하민', color:'#C47BFF', count:1, active:true },
 ];
 const PALETTE = ['#7B9FFF','#FF7BAC','#7BFFE0','#FFD97B','#C47BFF',
@@ -837,7 +837,7 @@ const state = {
     reserve: 3,
     eventName: '',
     eventDate: '',
-    memberField: '상품명',   // '상품명' | '옵션명'
+    memberField: '옵션명',   // '상품명' | '옵션명'
     filterEnabled: true,     // 최소 구매 수량 필터 on/off
     minQty: 5,               // 최소 구매 수량 (이상)
   },
@@ -955,11 +955,10 @@ function shuffle(arr) {
 
 // === SAMPLE DATA ===
 function loadSampleData() {
-  const members  = ['연호', '밤비', '노아', '은호', '하민'];
-  const options  = { '연호':['버전A','버전B'], '밤비':['버전A','버전B'], '노아':['버전A','버전B'], '은호':['버전A','버전B'], '하민':['버전A','버전B'] };
-  const names    = ['김민준','이서윤','박지호','최유진','정다은','한승현','오나연','임지수',
-                    '강태양','신예린','윤도현','배소희','류준혁','문아린','허성민','양채원',
-                    '조민서','노지안','전하은','김준영'];
+  const members = ['은호', '밤비', '예준', '노아', '하민'];
+  const names   = ['김민준','이서윤','박지호','최유진','정다은','한승현','오나연','임지수',
+                   '강태양','신예린','윤도현','배소희','류준혁','문아린','허성민','양채원',
+                   '조민서','노지안','전하은','김준영'];
   const data = [];
   let orderNum = 20240001;
 
@@ -973,14 +972,13 @@ function loadSampleData() {
 
     chosen.forEach(member => {
       const qty = Math.random() < 0.4 ? Math.floor(Math.random()*4)+1 : Math.floor(Math.random()*8)+5;
-      const opt = options[member][Math.floor(Math.random()*2)];
       data.push({
         '주문번호':   orderNo,
         '주문자명':   name,
         '휴대폰번호': phone,
         '계정ID':     account,
-        '상품명':     `PLAVE ${member} 앨범`,
-        '옵션명':     `${member} - ${opt}`,
+        '상품명':     'plave album 사인회 특전',
+        '옵션명':     member,
         '수량':       qty,
       });
     });
@@ -1102,8 +1100,8 @@ const TICKET_MODE_INFO = {
     example: '예) 노아 3개 + 밤비 5개 주문 → 노아풀 1장 + 밤비풀 1장\n같은 주문에서 노아를 몇 개 샀든 노아풀엔 1장만 들어갑니다.'
   },
   one_per_order: {
-    title: '주문번호당 1장 고정 (주문 기준)',
-    example: '예) 노아 3개 + 밤비 5개 주문 → 전체 추첨풀에 1장만 부여\n어떤 멤버를 얼마나 샀든 주문 1건 = 1장입니다.\n※ 멤버별 풀 모드와 함께 쓸 경우, 각 멤버풀에 1장씩 들어갑니다.'
+    title: '주문번호당 1장 고정 (수량 최다 멤버 기준)',
+    example: '예) 노아 2개 + 밤비 5개 주문 → 수량 더 많은 밤비풀에 1장\n예) 노아 3개 + 은호 3개 주문 → 동률이면 먼저 입력된 노아풀에 1장\n주문 1건당 응모 멤버가 1명으로 확정됩니다.'
   },
   one_per_account: {
     title: '계정 ID당 1장 고정 (계정 기준)',
@@ -1194,7 +1192,19 @@ function buildPools() {
   state.filteredData = eligible;
 
   // ── 멤버 필드 추출 함수 ──
-  const getMember = r => (memberField === '옵션명' ? r['옵션명'] : r['상품명']) || r['멤버'] || r['상품'] || '';
+  // 선택된 컬럼 우선 매칭, 못 찾으면 나머지 컬럼도 확인
+  const getMember = r => {
+    const primary   = (memberField === '옵션명' ? r['옵션명'] : r['상품명'] || '').trim();
+    const secondary = (memberField === '옵션명' ? r['상품명'] : r['옵션명'] || '').trim();
+
+    const match = (val) => {
+      if (!val) return '';
+      if (activeMembers.includes(val)) return val;
+      return activeMembers.find(m => val.includes(m) || m.includes(val)) || '';
+    };
+
+    return match(primary) || match(secondary) || match((r['멤버'] || r['상품'] || '').trim());
+  };
 
   // ── 응모권 방식별 풀 생성 ──
   state.pools = {};
@@ -1218,14 +1228,19 @@ function buildPools() {
       state.pools[m].push({ ...r });
     });
   } else if (mode === 'one_per_order') {
-    const seen = new Set();
+    // 주문번호당 1장 — 해당 주문에서 수량이 가장 많은 멤버 풀에 1장 (동률이면 첫 번째 행)
+    const orderMap = {}; // { 주문번호: { member, qty, row } }
     eligible.forEach(r => {
-      const m = getMember(r);
+      const m   = getMember(r);
       if (!activeMembers.includes(m)) return;
-      const key = `${r['주문번호']}__${m}`;
-      if (seen.has(key)) return;
-      seen.add(key);
-      state.pools[m].push({ ...r });
+      const qty = parseInt(r['수량']) || 1;
+      const ono = r['주문번호'];
+      if (!orderMap[ono] || qty > orderMap[ono].qty) {
+        orderMap[ono] = { member: m, qty, row: r };
+      }
+    });
+    Object.values(orderMap).forEach(({ member, row }) => {
+      state.pools[member].push({ ...row });
     });
   } else if (mode === 'one_per_account') {
     const seen = new Set();
