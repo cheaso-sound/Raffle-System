@@ -404,6 +404,12 @@
   @keyframes countUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
   .count-anim { animation: countUp 0.3s ease-out; }
 
+  /* ADVANCED SETTINGS */
+  #advanced-settings-card { transition: all 0.2s; }
+  #advanced-settings-card:hover { border-color: var(--border2); }
+  #advanced-body { animation: fadeIn 0.2s ease-out; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+
   /* MEMBER EDITOR */
   .member-editor-row {
     display: flex; align-items: center; gap: 10px;
@@ -521,7 +527,7 @@
       </div>
       <div style="margin-top:14px; padding:10px 14px; background:var(--surface2); border-radius:8px; border:0.5px solid var(--border);">
         <div style="font-size:11px; color:var(--muted); line-height:1.8;">
-          멤버 이름은 업로드 엑셀의 <span style="font-family:'Space Mono',monospace; color:var(--text);">멤버</span> 컬럼값과 정확히 일치해야 합니다.
+          멤버 이름은 업로드 CSV의 <span style="font-family:'Space Mono',monospace; color:var(--text);">상품명</span> 또는 <span style="font-family:'Space Mono',monospace; color:var(--text);">옵션명</span> 컬럼값과 정확히 일치해야 합니다.
           &nbsp;·&nbsp; 추첨 인원: 해당 멤버 당첨자 수 &nbsp;·&nbsp; 색상: 추첨 화면 구분색
         </div>
       </div>
@@ -532,8 +538,8 @@
       <div class="card-title">응모 데이터 업로드</div>
       <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
         <div class="upload-icon">📁</div>
-        <div class="upload-text">CSV 또는 엑셀 파일을 클릭하여 업로드</div>
-        <div class="upload-sub">필수 컬럼: 휴대폰번호, 주문번호, 계정ID, 상품(멤버명)</div>
+        <div class="upload-text">CSV 파일을 클릭하여 업로드</div>
+        <div class="upload-sub">필수 컬럼: 주문번호, 주문자명, 휴대폰번호, 계정ID, 상품명, 옵션명, 수량</div>
       </div>
       <input type="file" id="file-input" accept=".csv,.xlsx,.xls" onchange="handleFileUpload(this)">
       <div id="upload-status" style="display:none;">
@@ -592,12 +598,17 @@
 
     <div class="two-col">
       <div class="card">
-        <div class="card-title">추첨 모수 구분</div>
-        <div class="toggle-group">
-          <button class="toggle-btn active" onclick="setToggle(this,'pool')">멤버별 추첨</button>
-          <button class="toggle-btn" onclick="setToggle(this,'pool')">전체 통합</button>
+        <div class="card-title">멤버 구분 기준 컬럼</div>
+        <div style="font-size:12px; color:var(--muted); margin-bottom:12px; line-height:1.6;">
+          CSV의 어떤 컬럼을 멤버 구분 기준으로 사용할지 선택하세요.
         </div>
-        <div style="font-size:12px; color: var(--muted);">멤버별: 해당 멤버 구매자 중 추첨</div>
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="field-btn-product" onclick="setMemberField('상품명')">상품명</button>
+          <button class="toggle-btn" id="field-btn-option" onclick="setMemberField('옵션명')">옵션명</button>
+        </div>
+        <div id="member-field-desc" style="font-size:12px; color:var(--muted); margin-top:8px; line-height:1.6;">
+          CSV <span style="font-family:'Space Mono',monospace; color:var(--text);">상품명</span> 컬럼값을 멤버 구분 기준으로 사용합니다.
+        </div>
       </div>
       <div class="card">
         <div class="card-title">예비 당첨자 설정</div>
@@ -606,6 +617,51 @@
         <div style="font-size:12px; color:var(--muted); line-height:1.6;">
           예비 당첨자는 결과 화면에서만 확인 가능하며 공개 추첨 시 노출되지 않습니다.
         </div>
+      </div>
+    </div>
+
+    <!-- 기타 설정 (비공개 조건 포함) -->
+    <div class="card" id="advanced-settings-card">
+      <div style="display:flex; align-items:center; justify-content:space-between; cursor:pointer;" onclick="toggleAdvanced()">
+        <div class="card-title" style="margin-bottom:0;">기타</div>
+        <div id="advanced-arrow" style="font-size:18px; color:var(--muted); transition:transform 0.25s;">▸</div>
+      </div>
+
+      <div id="advanced-body" style="display:none; margin-top:20px; border-top:0.5px solid var(--border); padding-top:20px;">
+
+        <!-- 최소 구매 수량 필터 -->
+        <div style="margin-bottom:24px;">
+          <div style="font-size:13px; font-weight:500; margin-bottom:6px;">추첨 대상 최소 구매 조건</div>
+          <div style="font-size:12px; color:var(--muted); line-height:1.7; margin-bottom:14px;">
+            주문번호 기준으로 총 구매 수량이 설정값 미만인 주문은 추첨 모수에서 제외됩니다.<br>
+            이 조건은 추첨 화면 및 공개 영상에 노출되지 않습니다.
+          </div>
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <div class="toggle-group" style="margin-bottom:0;">
+              <button class="toggle-btn active" id="filter-on-btn" onclick="setFilterMode(true)">조건 설정</button>
+              <button class="toggle-btn" id="filter-off-btn" onclick="setFilterMode(false)">제한 없음</button>
+            </div>
+            <div id="filter-qty-wrap" style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:13px; color:var(--muted); white-space:nowrap;">주문번호 기준</span>
+              <input type="number" id="min-qty-input" min="1" max="999" value="5"
+                style="margin-bottom:0; width:70px; text-align:center;"
+                oninput="updateFilterDesc()">
+              <span style="font-size:13px; color:var(--muted); white-space:nowrap;">개 이상 구매자만 추첨 대상</span>
+            </div>
+          </div>
+          <div id="filter-desc" style="margin-top:10px; padding:10px 14px; background:var(--surface2); border-radius:8px; border:0.5px solid var(--border); font-size:12px; color:var(--muted); line-height:1.7;"></div>
+        </div>
+
+        <!-- 추첨 모수 구분 -->
+        <div>
+          <div style="font-size:13px; font-weight:500; margin-bottom:6px;">추첨 모수 구분</div>
+          <div class="toggle-group">
+            <button class="toggle-btn active" onclick="setToggle(this,'pool')">멤버별 추첨</button>
+            <button class="toggle-btn" onclick="setToggle(this,'pool')">전체 통합</button>
+          </div>
+          <div style="font-size:12px; color:var(--muted); margin-top:6px;">멤버별: 해당 멤버 구매자 풀에서만 추첨</div>
+        </div>
+
       </div>
     </div>
 
@@ -781,6 +837,9 @@ const state = {
     reserve: 3,
     eventName: '',
     eventDate: '',
+    memberField: '상품명',   // '상품명' | '옵션명'
+    filterEnabled: true,     // 최소 구매 수량 필터 on/off
+    minQty: 5,               // 최소 구매 수량 (이상)
   },
   pools: {},
   winners: {},
@@ -896,37 +955,33 @@ function shuffle(arr) {
 
 // === SAMPLE DATA ===
 function loadSampleData() {
-  const members = ['연호','밤비','노아','은호','하민'];
-  const names = ['김민준','이서윤','박지호','최유진','정다은','한승현','오나연','임지수',
-                 '강태양','신예린','윤도현','배소희','류준혁','문아린','허성민','양채원',
-                 '조민서','노지안','전하은','김준영'];
+  const members  = ['연호', '밤비', '노아', '은호', '하민'];
+  const options  = { '연호':['버전A','버전B'], '밤비':['버전A','버전B'], '노아':['버전A','버전B'], '은호':['버전A','버전B'], '하민':['버전A','버전B'] };
+  const names    = ['김민준','이서윤','박지호','최유진','정다은','한승현','오나연','임지수',
+                    '강태양','신예린','윤도현','배소희','류준혁','문아린','허성민','양채원',
+                    '조민서','노지안','전하은','김준영'];
   const data = [];
   let orderNum = 20240001;
 
   for (let i = 0; i < 80; i++) {
-    const name = names[i % names.length];
-    const phone = `010-${String(Math.floor(Math.random()*9000)+1000)}-${String(Math.floor(Math.random()*9000)+1000)}`;
+    const name    = names[i % names.length];
+    const phone   = `010-${String(Math.floor(Math.random()*9000)+1000)}-${String(Math.floor(Math.random()*9000)+1000)}`;
     const account = `user_${String(i+1).padStart(4,'0')}`;
     const orderNo = `ORD-${orderNum++}`;
-    // 1~3종류 멤버 앨범
-    const nMembers = Math.random() < 0.55 ? 1 : Math.random() < 0.7 ? 2 : 3;
-    const chosen = [...members].sort(()=>Math.random()-0.5).slice(0, nMembers);
-    let totalQty = 0;
-    const items = chosen.map(m => {
+    const nItems  = Math.random() < 0.55 ? 1 : Math.random() < 0.7 ? 2 : 3;
+    const chosen  = [...members].sort(() => Math.random()-0.5).slice(0, nItems);
+
+    chosen.forEach(member => {
       const qty = Math.random() < 0.4 ? Math.floor(Math.random()*4)+1 : Math.floor(Math.random()*8)+5;
-      totalQty += qty;
-      return { member: m, qty };
-    });
-    items.forEach(({ member, qty }) => {
+      const opt = options[member][Math.floor(Math.random()*2)];
       data.push({
-        '주문번호': orderNo,
-        '주문자명': name,
+        '주문번호':   orderNo,
+        '주문자명':   name,
         '휴대폰번호': phone,
-        '계정ID': account,
-        '주문일': `2024-${String(Math.floor(Math.random()*3)+10).padStart(2,'0')}-${String(Math.floor(Math.random()*28)+1).padStart(2,'0')}`,
-        '멤버': member,
-        '멤버별수량': qty,
-        '주문총수량': totalQty
+        '계정ID':     account,
+        '상품명':     `PLAVE ${member} 앨범`,
+        '옵션명':     `${member} - ${opt}`,
+        '수량':       qty,
       });
     });
   }
@@ -958,46 +1013,85 @@ function handleFileUpload(input) {
 }
 
 function renderUploadStatus() {
-  const el = document.getElementById('upload-status');
+  const el      = document.getElementById('upload-status');
   const statsEl = document.getElementById('upload-stats');
-  const area = document.getElementById('upload-area');
+  const area    = document.getElementById('upload-area');
   el.style.display = 'block';
   area.classList.add('has-data');
 
-  const total = state.rawData.length;
-  const members = [...new Set(state.rawData.map(r => r['상품']))];
+  const total        = state.rawData.length;
   const uniqueOrders = [...new Set(state.rawData.map(r => r['주문번호']))].length;
   const uniquePhones = [...new Set(state.rawData.map(r => r['휴대폰번호']))].length;
 
+  // 상품명 또는 옵션명 기준 고유값
+  const field   = state.settings.memberField;
+  const colKey  = field === '옵션명' ? '옵션명' : '상품명';
+  const uniqueMembers = [...new Set(state.rawData.map(r => r[colKey] || r['멤버'] || r['상품'] || '').filter(Boolean))].length;
+
   statsEl.innerHTML = `
-    <div class="stat-chip"><div class="val">${total}</div><div class="lbl">전체 응모 건수</div></div>
+    <div class="stat-chip"><div class="val">${total}</div><div class="lbl">전체 행 수</div></div>
     <div class="stat-chip"><div class="val">${uniqueOrders}</div><div class="lbl">고유 주문번호</div></div>
     <div class="stat-chip"><div class="val">${uniquePhones}</div><div class="lbl">고유 휴대폰</div></div>
-    <div class="stat-chip"><div class="val">${members.length}</div><div class="lbl">멤버 수</div></div>
+    <div class="stat-chip"><div class="val">${uniqueMembers}</div><div class="lbl">${colKey} 종류</div></div>
   `;
 
-  // Preview table
+  // Preview table — show actual columns from data
   const preview = state.rawData.slice(0, 8);
   const headers = Object.keys(preview[0] || {});
-  let html = `<table class="data-table"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>`;
+  let html = `<div class="data-table-wrap"><table class="data-table"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>`;
   preview.forEach(row => {
-    const member = row['상품'] || '';
-    const mc = MEMBER_COLORS[member];
     html += `<tr>${headers.map(h => {
-      if (h === '상품') return `<td class="member-cell" style="color:${mc ? mc.color : 'inherit'}">${row[h]||''}</td>`;
-      if (h === '휴대폰번호') {
-        const masked = (row[h]||'').replace(/(\d{4})$/, '****');
-        return `<td>${masked}</td>`;
+      if (h === '휴대폰번호') return `<td>${(row[h]||'').replace(/(\d{4})$/,'****')}</td>`;
+      if (h === '상품명' || h === '옵션명') {
+        const isActive = h === colKey;
+        return `<td style="${isActive ? `color:var(--accent);font-weight:500;` : ''}">${row[h]||''}</td>`;
       }
       return `<td>${row[h]||''}</td>`;
     }).join('')}</tr>`;
   });
-  if (state.rawData.length > 8) html += `<tr><td colspan="${headers.length}" style="text-align:center; color: var(--muted); padding:10px;">... 외 ${state.rawData.length - 8}건</td></tr>`;
-  html += '</tbody></table>';
+  if (state.rawData.length > 8) html += `<tr><td colspan="${headers.length}" style="text-align:center;color:var(--muted);padding:10px;">... 외 ${state.rawData.length-8}건</td></tr>`;
+  html += '</tbody></table></div>';
   document.getElementById('preview-table-wrap').innerHTML = html;
 }
 
-// === TICKET MODE ===
+// === ADVANCED SETTINGS ===
+function toggleAdvanced() {
+  const body = document.getElementById('advanced-body');
+  const arrow = document.getElementById('advanced-arrow');
+  const open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  arrow.style.transform = open ? 'rotate(90deg)' : 'rotate(0deg)';
+  if (open) updateFilterDesc();
+}
+
+function setMemberField(field) {
+  state.settings.memberField = field;
+  document.getElementById('field-btn-product').classList.toggle('active', field === '상품명');
+  document.getElementById('field-btn-option').classList.toggle('active', field === '옵션명');
+  const colName = field === '상품명' ? '상품명' : '옵션명';
+  document.getElementById('member-field-desc').innerHTML =
+    `CSV <span style="font-family:'Space Mono',monospace; color:var(--text);">${colName}</span> 컬럼값을 멤버 구분 기준으로 사용합니다.`;
+}
+
+function setFilterMode(enabled) {
+  state.settings.filterEnabled = enabled;
+  document.getElementById('filter-on-btn').classList.toggle('active', enabled);
+  document.getElementById('filter-off-btn').classList.toggle('active', !enabled);
+  document.getElementById('filter-qty-wrap').style.opacity = enabled ? '1' : '0.35';
+  document.getElementById('filter-qty-wrap').style.pointerEvents = enabled ? 'auto' : 'none';
+  updateFilterDesc();
+}
+
+function updateFilterDesc() {
+  const qty = parseInt(document.getElementById('min-qty-input').value) || 5;
+  state.settings.minQty = qty;
+  const el = document.getElementById('filter-desc');
+  if (!state.settings.filterEnabled) {
+    el.innerHTML = `<span style="color:var(--noah);">✓ 제한 없음</span> — 구매 수량에 관계없이 모든 주문이 추첨 대상입니다.`;
+  } else {
+    el.innerHTML = `<span style="color:var(--accent);">✓ 적용됨</span> — 주문번호 기준 총 구매 수량이 <strong style="color:var(--text);">${qty}개 이상</strong>인 주문만 추첨 대상에 포함됩니다. (${qty-1}개 이하 주문은 자동 제외)`;
+  }
+}
 const TICKET_MODE_INFO = {
   qty_per_album: {
     title: '앨범 1개 = 추첨권 1장 (수량 비례)',
@@ -1058,8 +1152,10 @@ function goToStep(step) {
   if (step === 1 && state.rawData.length === 0) loadSampleData();
 
   state.settings.reserve = parseInt(document.getElementById('reserve-count').value) || 3;
+  // read filter settings
+  const minInput = document.getElementById('min-qty-input');
+  if (minInput) state.settings.minQty = parseInt(minInput.value) || 5;
 
-  // validate members
   if (step === 1) {
     const valid = state.members.filter(m => m.name.trim() && m.active);
     if (valid.length === 0) { alert('추첨할 멤버를 1명 이상 활성화해주세요.'); return; }
@@ -1077,26 +1173,28 @@ function goToStep(step) {
 // === BUILD POOLS ===
 function buildPools() {
   const mode = state.settings.ticketMode;
+  const memberField = state.settings.memberField; // '상품명' | '옵션명'
   const activeMembers = getActiveMembers().map(m => m.name.trim()).filter(Boolean);
 
-  // ── 내부 필터: 주문총수량 5개 미만 제거 (비공개) ──
+  // ── 내부 필터: 최소 구매 수량 조건 (기타 설정에서 설정, 비공개) ──
   const orderTotalQty = {};
   state.rawData.forEach(r => {
     const ono = r['주문번호'] || '';
-    if (r['주문총수량']) {
-      orderTotalQty[ono] = parseInt(r['주문총수량']) || 0;
-    } else {
-      orderTotalQty[ono] = (orderTotalQty[ono] || 0) + (parseInt(r['멤버별수량'] || r['수량']) || 1);
-    }
+    const qty = parseInt(r['수량']) || 1;
+    orderTotalQty[ono] = (orderTotalQty[ono] || 0) + qty;
   });
 
-  let eligible = state.rawData.filter(r => {
-    const total = orderTotalQty[r['주문번호']] || parseInt(r['주문총수량'] || r['수량']) || 0;
-    return total >= 5;
-  });
-  if (eligible.length < 10) eligible = state.rawData;
+  let eligible = state.rawData;
+  if (state.settings.filterEnabled) {
+    const minQty = state.settings.minQty || 5;
+    const filtered = state.rawData.filter(r => (orderTotalQty[r['주문번호']] || 0) >= minQty);
+    if (filtered.length >= 5) eligible = filtered; // 모수 너무 적으면 전체 사용 (데모 보호)
+  }
 
   state.filteredData = eligible;
+
+  // ── 멤버 필드 추출 함수 ──
+  const getMember = r => (memberField === '옵션명' ? r['옵션명'] : r['상품명']) || r['멤버'] || r['상품'] || '';
 
   // ── 응모권 방식별 풀 생성 ──
   state.pools = {};
@@ -1104,15 +1202,15 @@ function buildPools() {
 
   if (mode === 'qty_per_album') {
     eligible.forEach(r => {
-      const m = r['멤버'] || r['상품'] || '';
+      const m = getMember(r);
       if (!activeMembers.includes(m)) return;
-      const qty = parseInt(r['멤버별수량'] || r['수량']) || 1;
+      const qty = parseInt(r['수량']) || 1;
       for (let i = 0; i < qty; i++) state.pools[m].push({ ...r, _ticketIdx: i+1, _totalTickets: qty });
     });
   } else if (mode === 'one_per_member_order') {
     const seen = new Set();
     eligible.forEach(r => {
-      const m = r['멤버'] || r['상품'] || '';
+      const m = getMember(r);
       if (!activeMembers.includes(m)) return;
       const key = `${r['주문번호']}__${m}`;
       if (seen.has(key)) return;
@@ -1122,7 +1220,7 @@ function buildPools() {
   } else if (mode === 'one_per_order') {
     const seen = new Set();
     eligible.forEach(r => {
-      const m = r['멤버'] || r['상품'] || '';
+      const m = getMember(r);
       if (!activeMembers.includes(m)) return;
       const key = `${r['주문번호']}__${m}`;
       if (seen.has(key)) return;
@@ -1132,7 +1230,7 @@ function buildPools() {
   } else if (mode === 'one_per_account') {
     const seen = new Set();
     eligible.forEach(r => {
-      const m = r['멤버'] || r['상품'] || '';
+      const m = getMember(r);
       if (!activeMembers.includes(m)) return;
       const acct = r['계정ID'] || r['휴대폰번호'] || r['주문번호'];
       const key = `${acct}__${m}`;
@@ -1149,21 +1247,32 @@ function buildPools() {
 
 function renderPoolScreen() {
   const activeMembers = getActiveMembers().map(m => m.name.trim()).filter(Boolean);
-  const totalTickets = activeMembers.reduce((s,m) => s + (state.pools[m]||[]).length, 0);
-  const uniqueOrders = [...new Set(state.filteredData.map(r => r['주문번호']))].length;
-  const modeInfo = TICKET_MODE_INFO[state.settings.ticketMode];
+  const totalTickets  = activeMembers.reduce((s,m) => s + (state.pools[m]||[]).length, 0);
+  const uniqueOrders  = [...new Set(state.filteredData.map(r => r['주문번호']))].length;
+  const totalOrders   = [...new Set(state.rawData.map(r => r['주문번호']))].length;
+  const modeInfo      = TICKET_MODE_INFO[state.settings.ticketMode];
+  const fieldLabel    = state.settings.memberField;
+  const filterDesc    = state.settings.filterEnabled
+    ? `주문 총 수량 ${state.settings.minQty}개 이상만 포함 (${totalOrders - uniqueOrders}건 제외)`
+    : '수량 제한 없음 (전체 포함)';
 
   document.getElementById('total-pool-label').textContent = `총 ${totalTickets}장`;
 
   document.getElementById('pool-stats').innerHTML = `
     <div class="stat-chip"><div class="val">${totalTickets}</div><div class="lbl">총 추첨권 수</div></div>
-    <div class="stat-chip"><div class="val">${uniqueOrders}</div><div class="lbl">고유 주문</div></div>
+    <div class="stat-chip"><div class="val">${uniqueOrders}</div><div class="lbl">추첨 대상 주문</div></div>
     <div class="stat-chip"><div class="val">${activeMembers.length}</div><div class="lbl">추첨 멤버</div></div>
-    <div class="stat-chip" style="flex:2; min-width:160px;"><div class="val" style="font-size:12px; font-family:'Noto Sans KR',sans-serif;">${modeInfo.title}</div><div class="lbl">적용된 응모권 방식</div></div>
+    <div class="stat-chip" style="flex:2; min-width:180px;">
+      <div class="val" style="font-size:11px; font-family:'Noto Sans KR',sans-serif; line-height:1.6;">
+        멤버기준: <span style="color:var(--accent)">${fieldLabel}</span>
+        &nbsp;·&nbsp; ${filterDesc}
+      </div>
+      <div class="lbl">적용 설정</div>
+    </div>
   `;
 
   document.getElementById('member-stats').innerHTML = activeMembers.map(m => {
-    const mc = getMemberColor(m);
+    const mc  = getMemberColor(m);
     const cnt = (state.pools[m] || []).length;
     return `<div class="member-stat" style="border-color:${mc.color}; background:${mc.bg};">
       <div class="m-name" style="color:${mc.color}">${m}</div>
@@ -1173,38 +1282,42 @@ function renderPoolScreen() {
   }).join('');
 
   const isQtyMode = state.settings.ticketMode === 'qty_per_album';
+  const colKey    = state.settings.memberField === '옵션명' ? '옵션명' : '상품명';
+
   document.getElementById('member-tabs').innerHTML = activeMembers.map((m, i) =>
     `<button class="tab-btn ${i===0?'active':''}" onclick="switchTab(this,'pool',${i})">${m} (${(state.pools[m]||[]).length}장)</button>`
   ).join('');
 
   document.getElementById('member-tab-contents').innerHTML = activeMembers.map((m, i) => {
     const pool = state.pools[m] || [];
-    const mc = getMemberColor(m);
+    const mc   = getMemberColor(m);
     const personMap = {};
     pool.forEach(r => {
-      const key = (r['주문번호']||'') + '__' + (r['멤버']||r['상품']);
+      const key = (r['주문번호']||'') + '__' + (r[colKey]||r['멤버']||r['상품']);
       if (!personMap[key]) personMap[key] = { r, tickets: 0 };
       personMap[key].tickets++;
     });
     const persons = Object.values(personMap);
     let html = `<div class="tab-content ${i===0?'active':''}" id="pool-tab-${i}">`;
     if (!pool.length) {
-      html += `<div style="text-align:center;padding:24px;color:var(--muted);">응모자 없음</div>`;
+      html += `<div style="text-align:center;padding:24px;color:var(--muted);">응모자 없음<br><span style="font-size:11px;">멤버 설정 이름이 CSV <b>${colKey}</b> 컬럼값과 일치하는지 확인해주세요.</span></div>`;
     } else {
       html += `<div class="data-table-wrap"><table class="data-table"><thead><tr>
-        <th>#</th><th>이름</th><th>휴대폰번호</th><th>주문번호</th><th>멤버</th>${isQtyMode?'<th>추첨권</th>':''}
+        <th>#</th><th>이름</th><th>휴대폰번호</th><th>주문번호</th><th>${colKey}</th><th>수량</th>${isQtyMode?'<th>추첨권</th>':''}
       </tr></thead><tbody>`;
       persons.slice(0,12).forEach(({r, tickets}, idx) => {
-        const phone = (r['휴대폰번호']||'').replace(/(\d{4})$/,'****');
-        const name = r['이름']||r['주문자명']||r['계정ID']||'-';
+        const phone  = (r['휴대폰번호']||'').replace(/(\d{4})$/,'****');
+        const name   = r['주문자명']||r['이름']||r['계정ID']||'-';
+        const mLabel = r[colKey]||r['멤버']||r['상품']||'';
         html += `<tr>
           <td style="color:var(--dim)">${idx+1}</td><td>${name}</td><td>${phone}</td>
           <td style="font-family:'Space Mono',monospace;font-size:11px;">${r['주문번호']||''}</td>
-          <td style="color:${mc.color};font-weight:700">${r['멤버']||r['상품']||''}</td>
+          <td style="color:${mc.color};font-weight:500;">${mLabel}</td>
+          <td style="text-align:center;">${r['수량']||1}</td>
           ${isQtyMode?`<td style="text-align:center;color:var(--accent);font-weight:700;font-family:'Space Mono',monospace;">${tickets}장</td>`:''}
         </tr>`;
       });
-      if (persons.length > 12) html += `<tr><td colspan="${isQtyMode?6:5}" style="text-align:center;color:var(--muted);padding:8px;">... 외 ${persons.length-12}명</td></tr>`;
+      if (persons.length > 12) html += `<tr><td colspan="${isQtyMode?7:6}" style="text-align:center;color:var(--muted);padding:8px;">... 외 ${persons.length-12}명</td></tr>`;
       html += '</tbody></table></div>';
     }
     return html + '</div>';
@@ -1448,6 +1561,7 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // === INIT ===
 renderMemberEditor();
+updateFilterDesc();
 </script>
 </body>
 </html>
