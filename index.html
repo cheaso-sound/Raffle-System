@@ -1375,7 +1375,7 @@ function prepareRaffle() {
     const card = document.createElement('div');
     card.className = 'raffle-card face-down';
     card.style.borderColor = mc.color;
-    card.innerHTML = `<div class="card-num">${String(i+1).padStart(2,'0')}</div><div class="card-member">${entry._member}</div>`;
+    card.innerHTML = `<div class="card-member" style="font-size:11px;">${entry._member}</div>`;
     card.dataset.member = entry._member;
     shuffleArea.appendChild(card);
   });
