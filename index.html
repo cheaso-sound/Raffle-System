@@ -525,7 +525,6 @@
       </div>
       <div class="btn-row" style="margin-top:12px;">
         <button class="btn btn-outline" onclick="addMemberRow()" style="font-size:13px;">+ 멤버 추가</button>
-        <button class="btn btn-outline" onclick="resetToDefault()" style="font-size:13px;">PLAVE 기본값으로</button>
       </div>
       <div style="margin-top:14px; padding:10px 14px; background:var(--surface2); border-radius:8px; border:0.5px solid var(--border);">
         <div style="font-size:11px; color:var(--muted); line-height:1.8;">
@@ -632,7 +631,7 @@
       <div id="advanced-body" style="display:none; margin-top:20px; border-top:0.5px solid var(--border); padding-top:20px;">
 
         <!-- 최소 구매 수량 필터 -->
-        <div style="margin-bottom:24px;">
+        <div>
           <div style="font-size:13px; font-weight:500; margin-bottom:6px;">추첨 대상 최소 구매 조건</div>
           <div style="font-size:12px; color:var(--muted); line-height:1.7; margin-bottom:14px;">
             주문번호 기준으로 총 구매 수량이 설정값 미만인 주문은 추첨 모수에서 제외됩니다.<br>
@@ -652,16 +651,6 @@
             </div>
           </div>
           <div id="filter-desc" style="margin-top:10px; padding:10px 14px; background:var(--surface2); border-radius:8px; border:0.5px solid var(--border); font-size:12px; color:var(--muted); line-height:1.7;"></div>
-        </div>
-
-        <!-- 추첨 모수 구분 -->
-        <div>
-          <div style="font-size:13px; font-weight:500; margin-bottom:6px;">추첨 모수 구분</div>
-          <div class="toggle-group">
-            <button class="toggle-btn active" onclick="setToggle(this,'pool')">멤버별 추첨</button>
-            <button class="toggle-btn" onclick="setToggle(this,'pool')">전체 통합</button>
-          </div>
-          <div style="font-size:12px; color:var(--muted); margin-top:6px;">멤버별: 해당 멤버 구매자 풀에서만 추첨</div>
         </div>
 
       </div>
@@ -788,6 +777,7 @@
 
     <div class="btn-row">
       <button class="btn btn-outline" onclick="downloadCSV()">📥 결과 CSV 저장</button>
+      <button class="btn btn-outline" onclick="reRaffle()">↩ 재추첨하기</button>
       <button class="btn btn-danger" onclick="resetAll()">처음부터 다시</button>
     </div>
   </div>
@@ -832,7 +822,6 @@ const state = {
   members: DEFAULT_MEMBERS.map(m => ({...m})),
   settings: {
     ticketMode: 'qty_per_album',
-    poolMode: 'member',
     reserve: 3,
     eventName: '',
     eventDate: '',
@@ -869,12 +858,12 @@ function renderMemberEditor() {
         style="width:28px; height:28px; border:none; border-radius:6px; cursor:pointer; padding:0; background:none; flex-shrink:0;">
       <input type="text" value="${m.name}" placeholder="멤버명"
         oninput="updateMemberField(${i},'name',this.value)"
-        style="margin-bottom:0; flex:1; min-width:80px; border-color:${m.color}40;">
-      <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+        style="margin-bottom:0; flex:0 0 180px; min-width:0; border-color:${m.color}40;">
+      <div style="display:flex; align-items:center; gap:6px; flex:1; min-width:0;">
         <span style="font-size:12px; color:var(--muted); white-space:nowrap;">당첨</span>
-        <input type="number" min="1" max="999" value="${m.count}"
+        <input type="number" min="1" max="9999" value="${m.count}"
           oninput="updateMemberField(${i},'count',parseInt(this.value)||1)"
-          style="margin-bottom:0; width:60px; text-align:center;">
+          style="margin-bottom:0; flex:1; min-width:60px; text-align:center;">
         <span style="font-size:12px; color:var(--muted);">명</span>
       </div>
       <button onclick="removeMember(${i})" title="삭제"
@@ -1131,7 +1120,6 @@ function setToggle(btn, group) {
     if (b.onclick && b.onclick.toString().includes(`'${group}'`)) b.classList.remove('active');
   });
   btn.classList.add('active');
-  if (group === 'pool') state.settings.poolMode = btn.textContent.includes('멤버별') ? 'member' : 'all';
 }
 
 function toggleMember(btn) {
@@ -1145,11 +1133,10 @@ function toggleMember(btn) {
 }
 
 // === NAVIGATION ===
-function goToStep(step) {
+function goToStep(step, pushHistory = true) {
   if (step === 1 && state.rawData.length === 0) loadSampleData();
 
   state.settings.reserve = parseInt(document.getElementById('reserve-count').value) || 3;
-  // read filter settings
   const minInput = document.getElementById('min-qty-input');
   if (minInput) state.settings.minQty = parseInt(minInput.value) || 5;
 
@@ -1165,6 +1152,8 @@ function goToStep(step) {
   document.querySelectorAll('.step-dot').forEach((d, i) => d.classList.toggle('active', i <= step));
   state.currentStep = step;
   window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  if (pushHistory) history.pushState({ step }, '', '');
 }
 
 // === BUILD POOLS ===
@@ -1585,6 +1574,12 @@ function downloadCSV() {
   URL.revokeObjectURL(url);
 }
 
+function reRaffle() {
+  // 설정 조건 그대로 추첨 화면(STEP 3)으로 돌아가 재추첨
+  raffleRunning = false;
+  goToStep(2);
+}
+
 function resetAll() {
   if (!confirm('처음부터 다시 시작하시겠습니까? 현재 추첨 결과가 초기화됩니다.')) return;
   state.rawData = []; state.filteredData = [];
@@ -1593,6 +1588,7 @@ function resetAll() {
   document.getElementById('upload-status').style.display = 'none';
   document.getElementById('upload-area').classList.remove('has-data');
   document.getElementById('file-input').value = '';
+  history.pushState({ step: 0 }, '', '');
   goToStep(0);
 }
 
@@ -1601,6 +1597,13 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 // === INIT ===
 renderMemberEditor();
 updateFilterDesc();
+history.replaceState({ step: 0 }, '', '');
+
+// 브라우저 뒤로가기 처리 — 설정 조건 유지한 채 이전 화면으로
+window.addEventListener('popstate', e => {
+  const step = e.state?.step ?? 0;
+  if (step < state.currentStep) goToStep(step, false);
+});
 </script>
 </body>
 </html>
