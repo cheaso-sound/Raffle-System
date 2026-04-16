@@ -771,9 +771,6 @@
       <button class="btn btn-primary" id="start-raffle-btn" onclick="startRaffle()">
         ▶ 추첨 시작
       </button>
-      <button class="btn btn-outline" id="next-member-btn" style="display:none;" onclick="drawNextMember()">
-        다음 멤버 추첨 →
-      </button>
     </div>
   </div>
 
@@ -1362,7 +1359,6 @@ function prepareRaffle() {
   document.getElementById('live-winners-wrap').style.display = 'none';
   document.getElementById('live-winners-list').innerHTML = '';
   document.getElementById('current-member-panel').style.display = 'none';
-  document.getElementById('next-member-btn').style.display = 'none';
   document.getElementById('start-raffle-btn').style.display = 'inline-flex';
 
   const shuffleArea = document.getElementById('shuffle-area');
@@ -1395,7 +1391,6 @@ function startRaffle() {
 }
 
 async function drawNextMember() {
-  document.getElementById('next-member-btn').style.display = 'none';
   if (memberQueue.length === 0) { finishRaffle(); return; }
   const member = memberQueue.shift();
   const mc = getMemberColor(member);
@@ -1427,11 +1422,11 @@ async function drawNextMember() {
 
   await revealWinners(member, picked, mc);
 
+  // 다음 멤버 자동 진행 (잠깐 텀을 두고)
   if (memberQueue.length > 0) {
-    document.getElementById('next-member-btn').style.display = 'inline-flex';
-    document.getElementById('next-member-btn').textContent = `${memberQueue[0]} 멤버 추첨하기 →`;
-    document.getElementById('status-text').textContent = `${member} 추첨 완료`;
-    document.getElementById('status-dot').className = 'status-dot done';
+    document.getElementById('status-text').textContent = `${member} 완료 · 다음 멤버 추첨 중...`;
+    await sleep(800);
+    drawNextMember();
   } else {
     setTimeout(finishRaffle, 1500);
   }
