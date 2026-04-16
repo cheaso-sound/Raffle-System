@@ -1342,7 +1342,6 @@ function renderPoolScreen() {
 }
 
 function switchTab(btn, prefix, idx) {
-  const parent = btn.closest('.card, [id]');
   btn.closest('.tab-row').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   document.querySelectorAll(`[id^="${prefix}-tab-"]`).forEach(c => c.classList.remove('active'));
@@ -1500,15 +1499,41 @@ function buildResults() {
     <div class="stat-chip"><div class="val">${state.filteredData.length}</div><div class="lbl">총 모수</div></div>
   `;
 
-  document.getElementById('result-tabs').innerHTML = activeMembers.map((m,i) =>
-    `<button class="tab-btn ${i===0?'active':''}" onclick="switchTab(this,'result',${i})">${m}</button>`
-  ).join('');
+  // 탭 — 전체 + 멤버별
+  document.getElementById('result-tabs').innerHTML =
+    `<button class="tab-btn active" onclick="switchTab(this,'result','all')">전체 (${totalWinners}명)</button>` +
+    activeMembers.map((m,i) =>
+      `<button class="tab-btn" onclick="switchTab(this,'result',${i})">${m} (${(state.winners[m]||[]).length}명)</button>`
+    ).join('');
 
-  document.getElementById('result-tab-contents').innerHTML = activeMembers.map((m,i) => {
+  // 전체 탭 콘텐츠
+  let allHtml = `<div class="tab-content active" id="result-tab-all">`;
+  allHtml += `<div class="card-title" style="margin-bottom:12px;">🏆 전체 당첨자 (${totalWinners}명)</div>`;
+  let globalRank = 1;
+  activeMembers.forEach(m => {
+    const winners = state.winners[m]||[];
+    const mc = getMemberColor(m);
+    winners.forEach(r => {
+      const phone = (r['휴대폰번호']||'').replace(/(\d{4})$/,'****');
+      allHtml += `<div class="winner-card">
+        <div class="winner-rank">#${globalRank++}</div>
+        <div class="winner-member-badge" style="background:${mc.bg};color:${mc.color};">${m}</div>
+        <div class="winner-info">
+          <div class="winner-name">${r['이름']||r['주문자명']||r['계정ID']||'응모자'}</div>
+          <div class="winner-detail">${phone} · ${r['주문번호']||''}</div>
+        </div>
+        <div style="font-size:11px;background:rgba(123,255,159,0.12);color:#7BFF9F;padding:4px 10px;border-radius:6px;font-weight:700;">당첨</div>
+      </div>`;
+    });
+  });
+  allHtml += `</div>`;
+
+  // 멤버별 탭 콘텐츠
+  const memberHtml = activeMembers.map((m,i) => {
     const winners = state.winners[m]||[];
     const reserves = state.reserves[m]||[];
     const mc = getMemberColor(m);
-    let html = `<div class="tab-content ${i===0?'active':''}" id="result-tab-${i}">`;
+    let html = `<div class="tab-content" id="result-tab-${i}">`;
     html += `<div class="card-title" style="margin-bottom:12px;">🏆 당첨자 (${winners.length}명)</div>`;
     winners.forEach((r,idx) => {
       const phone = (r['휴대폰번호']||'').replace(/(\d{4})$/,'****');
@@ -1539,6 +1564,8 @@ function buildResults() {
     }
     return html + '</div>';
   }).join('');
+
+  document.getElementById('result-tab-contents').innerHTML = allHtml + memberHtml;
 }
 
 function downloadCSV() {
