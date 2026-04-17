@@ -1369,13 +1369,44 @@ function prepareRaffle() {
 let raffleRunning = false;
 let memberQueue = [];
 
+// 전체 추첨에서 이미 당첨된 사람(주문번호 기준) 추적
+let globalWinnerKeys = new Set();
+
 function startRaffle() {
   if (raffleRunning) return;
+
+  const activeMembers = getActiveMembers().map(m => m.name.trim()).filter(Boolean);
+
+  // ── 모수 < 당첨 인원 사전 검증 ──
+  const overList = [];
+  activeMembers.forEach(member => {
+    const mObj = state.members.find(m => m.name === member);
+    const count = mObj ? mObj.count : 1;
+    // 고유 응모자 수 (주문번호 기준 중복 제거)
+    const uniqueCount = new Set((state.pools[member] || []).map(r => r['주문번호'])).size;
+    if (count > uniqueCount) {
+      overList.push({ member, count, uniqueCount });
+    }
+  });
+
+  if (overList.length > 0) {
+    const msg = overList.map(o =>
+      `• ${o.member}: 당첨 목표 ${o.count}명 > 응모자 ${o.uniqueCount}명`
+    ).join('\n');
+    const proceed = confirm(
+      `⚠️ 아래 멤버의 당첨 인원이 응모 모수보다 많습니다.\n\n${msg}\n\n` +
+      `[확인] 응모자 전원을 당첨자로 처리하고 추첨을 진행합니다.\n` +
+      `[취소] 추첨을 중단하고 설정으로 돌아갑니다.`
+    );
+    if (!proceed) return;
+  }
+
   raffleRunning = true;
+  globalWinnerKeys = new Set();
   document.getElementById('start-raffle-btn').style.display = 'none';
   document.getElementById('status-dot').className = 'status-dot running';
   document.getElementById('live-winners-wrap').style.display = 'block';
-  memberQueue = getActiveMembers().map(m => m.name.trim()).filter(Boolean);
+  memberQueue = activeMembers;
   drawNextMember();
 }
 
@@ -1383,18 +1414,58 @@ async function drawNextMember() {
   if (memberQueue.length === 0) { finishRaffle(); return; }
   const member = memberQueue.shift();
   const mc = getMemberColor(member);
-  const pool = shuffle(state.pools[member] || []);
   const mObj = state.members.find(m => m.name === member);
   const count = mObj ? mObj.count : 1;
   const reserveCount = state.settings.reserve;
 
+  // ── 원본 풀 셔플 (수량 비례 모드면 중복 엔트리 그대로 유지 → 확률 반영) ──
+  const rawPool = shuffle(state.pools[member] || []);
+
+  // ── 고유 응모자 수 계산 (주문번호 기준) ──
+  const uniqueKeys = new Set(rawPool.map(r => r['주문번호'] || r['계정ID'] || r['휴대폰번호']));
+  const uniqueCount = uniqueKeys.size;
+
   document.getElementById('current-member-panel').style.display = 'block';
   document.getElementById('current-member-dot').style.background = mc.color;
   document.getElementById('current-member-name').textContent = `${member} 멤버 추첨 중`;
-  document.getElementById('current-member-count').textContent = `총 ${pool.length}장 중 ${count}명 추첨`;
+  document.getElementById('current-member-count').textContent = `총 ${uniqueCount}명 중 ${Math.min(count, uniqueCount)}명 추첨`;
   document.getElementById('status-text').textContent = `${member} 멤버 추첨중...`;
 
   await animateShuffleCards(member, mc);
+
+  // ── 당첨자 추출: 중복이 나오면 해당 자리만 재추첨 (반복) ──
+  const pickedKeys = new Set();   // 이번 멤버 당첨자 키
+  const picked = [];
+  const available = [...rawPool];  // 셔플된 풀 (중복 엔트리 포함)
+
+  while (picked.length < Math.min(count, uniqueCount) && available.length > 0) {
+    const r = available.shift();
+    const key = r['주문번호'] || r['계정ID'] || r['휴대폰번호'];
+    if (pickedKeys.has(key)) continue;        // 이미 이번 멤버에서 당첨
+    if (globalWinnerKeys.has(key)) continue;  // 다른 멤버에서 이미 당첨
+    pickedKeys.add(key);
+    picked.push(r);
+  }
+
+  // 예비 당첨자 (당첨자 이후 남은 풀에서 중복 제거)
+  const reserveKeys = new Set([...pickedKeys]);
+  const reserves = [];
+  for (const r of available) {
+    if (reserves.length >= reserveCount) break;
+    const key = r['주문번호'] || r['계정ID'] || r['휴대폰번호'];
+    if (reserveKeys.has(key) || globalWinnerKeys.has(key)) continue;
+    reserveKeys.add(key);
+    reserves.push(r);
+  }
+
+  state.winners[member] = picked;
+  state.reserves[member] = reserves;
+
+  // 당첨자 전역 키 등록
+  picked.forEach(r => {
+    const key = r['주문번호'] || r['계정ID'] || r['휴대폰번호'];
+    if (key) globalWinnerKeys.add(key);
+  });
 
   const activeNames = getActiveMembers().map(m => m.name.trim()).filter(Boolean);
   const total = activeNames.length;
@@ -1404,14 +1475,8 @@ async function drawNextMember() {
   document.getElementById('progress-label-right').textContent = `${pct}%`;
   document.getElementById('progress-label-left').textContent = `${done}/${total} 멤버`;
 
-  const picked = pool.slice(0, count);
-  const reserves = pool.slice(count, count + reserveCount);
-  state.winners[member] = picked;
-  state.reserves[member] = reserves;
-
   await revealWinners(member, picked, mc);
 
-  // 다음 멤버 자동 진행 (잠깐 텀을 두고)
   if (memberQueue.length > 0) {
     document.getElementById('status-text').textContent = `${member} 완료 · 다음 멤버 추첨 중...`;
     await sleep(800);
@@ -1575,8 +1640,8 @@ function downloadCSV() {
 }
 
 function reRaffle() {
-  // 설정 조건 그대로 추첨 화면(STEP 3)으로 돌아가 재추첨
   raffleRunning = false;
+  globalWinnerKeys = new Set();
   goToStep(2);
 }
 
